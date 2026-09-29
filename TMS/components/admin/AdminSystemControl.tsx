@@ -18,6 +18,7 @@ export function AdminSystemControl() {
 
   // Shutdown Dialog State
   const [isShutdownModalOpen, setIsShutdownModalOpen] = useState(false);
+  const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
   const [shutdownConfirmText, setShutdownConfirmText] = useState('');
   const [shutdownReason, setShutdownReason] = useState('');
   const [allowBypass, setAllowBypass] = useState(true);
@@ -243,22 +244,58 @@ export function AdminSystemControl() {
             {state === 'ONLINE' ? (
               <button
                 onClick={() => setIsShutdownModalOpen(true)}
-                className="px-3.5 py-1.5 rounded-md text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors"
+                className="px-3.5 py-1.5 rounded-md text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors shadow-sm flex items-center gap-1.5"
               >
-                Shut Down System
+                <AlertTriangle size={14} className="text-red-600" />
+                <span>Shut Down System</span>
               </button>
             ) : (
               <button
-                onClick={handleReturnOnline}
+                onClick={() => setIsResumeModalOpen(true)}
                 disabled={loading}
-                className="px-3.5 py-1.5 rounded-md text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 transition-colors"
+                className="px-4 py-2 rounded-md text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow flex items-center gap-1.5"
               >
-                Restore System Online
+                <Check size={14} />
+                <span>Resume System</span>
               </button>
             )}
           </div>
         </div>
       </div>
+
+      {/* PROMINENT SHUTDOWN ALERT BANNER */}
+      {state === 'SHUTDOWN' && (
+        <div className="p-5 rounded-xl bg-gradient-to-r from-red-950/30 to-red-900/20 border-2 border-red-500/50 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="space-y-1.5 max-w-3xl">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-red-600 animate-ping" />
+              <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-red-600 text-white">
+                GLOBAL SYSTEM SHUTDOWN ACTIVE
+              </span>
+              <span className="text-xs text-red-600 font-mono font-semibold">HTTP 503 Enforced</span>
+            </div>
+            <h3 className="text-sm font-bold text-slate-900">
+              The entire TMS application is functionally locked.
+            </h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              All non-admin users (Worker, Accounts, Manager, MD) are completely locked out from data operations and views. Backend rejection guarantees zero race-condition writes.
+            </p>
+            <div className="flex flex-wrap gap-4 text-[11px] text-slate-700 pt-1">
+              <span><strong>Activated by:</strong> <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-900">{controlState.shutdownBy || 'ADMIN'}</code></span>
+              <span><strong>Timestamp:</strong> {controlState.shutdownAt ? new Date(controlState.shutdownAt).toLocaleString('en-IN') : 'Recently'}</span>
+              <span><strong>Reason:</strong> {controlState.shutdownReason || 'Emergency Maintenance'}</span>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsResumeModalOpen(true)}
+            disabled={loading}
+            className="px-5 py-2.5 rounded-lg text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all shrink-0 flex items-center gap-2"
+          >
+            <Check size={16} />
+            <span>Resume System</span>
+          </button>
+        </div>
+      )}
 
       {/* METRICS ROW - MINIMAL */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
@@ -494,6 +531,70 @@ export function AdminSystemControl() {
                 className="px-4 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-md transition-colors"
               >
                 Confirm Shutdown
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RESUME SYSTEM CONFIRMATION MODAL */}
+      {isResumeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="max-w-md w-full bg-white rounded-xl border border-slate-300 shadow-2xl p-6 space-y-4">
+            <div className="pb-3 border-b border-slate-100 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                <Check size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Resume System</h3>
+                <p className="text-xs text-slate-500">Restore global SaaS operations</p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs leading-relaxed space-y-2">
+              <p className="font-bold text-sm text-emerald-900">
+                Resume the entire SaaS system?
+              </p>
+              <p className="text-emerald-800">
+                This will restore access to Worker, Accounts, Manager, and MD portals. Normal operations, trips, payments, rate cards, and financial transactions will immediately be allowed again.
+              </p>
+            </div>
+
+            <div className="p-3 rounded bg-slate-50 border border-slate-200 text-[11px] text-slate-600 space-y-1">
+              <div className="flex justify-between">
+                <span>Current State:</span>
+                <span className="font-mono font-bold text-red-600">SHUTDOWN</span>
+              </div>
+              <div className="flex justify-between">
+                <span>New State:</span>
+                <span className="font-mono font-bold text-emerald-600">ONLINE</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Audit Action:</span>
+                <span className="font-mono text-slate-700">SYSTEM_RESUMED</span>
+              </div>
+            </div>
+
+            <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsResumeModalOpen(false)}
+                disabled={loading}
+                className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 rounded-md"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsResumeModalOpen(false);
+                  await handleReturnOnline();
+                }}
+                disabled={loading}
+                className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors shadow flex items-center gap-1.5"
+              >
+                <Check size={14} />
+                <span>Confirm & Resume System</span>
               </button>
             </div>
           </div>

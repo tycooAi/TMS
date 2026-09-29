@@ -106,13 +106,30 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
         setSystemControl(s.systemControl);
       }
     };
+    const handleShutdownEvent = (e: any) => {
+      const detail = e.detail || {};
+      setSystemControl((prev) => ({
+        ...(prev || ({} as any)),
+        systemState: 'SHUTDOWN',
+        shutdownReason: detail.message || detail.shutdownReason || 'Emergency global system shutdown',
+        shutdownBy: detail.shutdownBy || 'ADMIN',
+        shutdownAt: detail.shutdownAt || new Date().toISOString(),
+      }));
+    };
+
     window.addEventListener('tms:store-update', handleStoreUpdate);
-    const interval = setInterval(checkGlobalSystemStatus, 30000);
+    window.addEventListener('tms:system-shutdown', handleShutdownEvent);
+
+    // Adaptive polling: 5s during shutdown/maintenance so users auto-recover immediately when resumed
+    const isRestricted = systemControl && (systemControl.systemState === 'SHUTDOWN' || systemControl.systemState === 'MAINTENANCE');
+    const interval = setInterval(checkGlobalSystemStatus, isRestricted ? 5000 : 15000);
+
     return () => {
       window.removeEventListener('tms:store-update', handleStoreUpdate);
+      window.removeEventListener('tms:system-shutdown', handleShutdownEvent);
       clearInterval(interval);
     };
-  }, []);
+  }, [systemControl?.systemState]);
 
   // Sync session
   useEffect(() => {
@@ -340,15 +357,41 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
 
           <div className="space-y-2">
             <h1 className="text-2xl font-black text-white tracking-tight">
-              {systemControl.maintenanceTitle || 'System Temporarily Unavailable'}
-            </h1>
-            <p className="text-xs text-[#a1b8cc] leading-relaxed max-w-md mx-auto">
               {systemControl.systemState === 'SHUTDOWN'
-                ? systemControl.shutdownReason ||
-                  'The entire SaaS platform is temporarily unavailable due to emergency maintenance. Please try again later.'
+                ? 'System Temporarily Unavailable'
+                : systemControl.maintenanceTitle || 'System Under Maintenance'}
+            </h1>
+            <p className="text-sm text-[#a1b8cc] leading-relaxed max-w-md mx-auto">
+              {systemControl.systemState === 'SHUTDOWN'
+                ? 'The system is currently shut down for maintenance. Please contact the administrator.'
                 : systemControl.maintenanceMessage ||
                   'The system is currently undergoing scheduled maintenance. Please check back shortly.'}
             </p>
+            {systemControl.systemState === 'SHUTDOWN' && (
+              <div className="pt-2">
+                <div className="p-3 rounded-lg bg-rose-950/40 border border-rose-500/30 text-rose-200 text-xs text-left space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-rose-300">Lock Enforcement:</span>
+                    <span className="font-mono text-[10px] bg-rose-500/20 px-1.5 py-0.5 rounded">HTTP 503 Backend Enforced</span>
+                  </div>
+                  {systemControl.shutdownReason && (
+                    <p className="text-[11px] text-rose-200">
+                      <strong>Reason:</strong> {systemControl.shutdownReason}
+                    </p>
+                  )}
+                  {systemControl.shutdownBy && (
+                    <p className="text-[11px] text-rose-200">
+                      <strong>Authorized By:</strong> {systemControl.shutdownBy}
+                    </p>
+                  )}
+                  {systemControl.shutdownAt && (
+                    <p className="text-[11px] text-rose-200">
+                      <strong>Timestamp:</strong> {new Date(systemControl.shutdownAt).toLocaleString('en-IN')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {systemControl.expectedRecoveryTime && (

@@ -66,8 +66,9 @@ export const DEMO_USERS: DemoUser[] = [
   },
 ];
 
-export function getPortalUrl(role: UserRole): string {
-  switch (role) {
+export function getPortalUrl(role: UserRole | string): string {
+  const cleanRole = (role || '').toUpperCase().replace(/^ROLE_/, '');
+  switch (cleanRole) {
     case 'WORKER':
       return '/worker/dashboard';
     case 'ACCOUNTS':
@@ -79,7 +80,7 @@ export function getPortalUrl(role: UserRole): string {
     case 'ADMIN':
       return '/admin/dashboard';
     default:
-      return '/login';
+      return '/worker/dashboard';
   }
 }
 
@@ -111,12 +112,60 @@ export function setSession(user: DemoUser | AuthSession): void {
 export function clearSession(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem('tms_jwt_token');
   window.dispatchEvent(new Event('tms:auth'));
+}
+
+export const REGISTERED_USERS_KEY = 'tms_registered_users';
+
+export function getStoredUsers(): DemoUser[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(REGISTERED_USERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function registerApplicationUser(user: DemoUser): void {
+  if (typeof window === 'undefined') return;
+  const current = getStoredUsers();
+  const existingIdx = current.findIndex(
+    (u) => u.username.toLowerCase() === user.username.toLowerCase() || u.id === user.id
+  );
+  if (existingIdx >= 0) {
+    current[existingIdx] = { ...current[existingIdx], ...user };
+  } else {
+    current.push(user);
+  }
+  localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(current));
+  window.dispatchEvent(new Event('tms:users-updated'));
+}
+
+export function updateStoredUserPassword(usernameOrId: string, newPassword: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const current = getStoredUsers();
+  const user = current.find(
+    (u) => u.username.toLowerCase() === usernameOrId.toLowerCase() || u.id === usernameOrId
+  );
+  if (user) {
+    user.password = newPassword;
+    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(current));
+    window.dispatchEvent(new Event('tms:users-updated'));
+    return true;
+  }
+  return false;
+}
+
+export function getAllApplicationUsers(): DemoUser[] {
+  return [...DEMO_USERS, ...getStoredUsers()];
 }
 
 export function authenticate(identifier: string, password: string): DemoUser | null {
   const norm = identifier.trim().toLowerCase();
-  const match = DEMO_USERS.find(
+  const allUsers = getAllApplicationUsers();
+  const match = allUsers.find(
     (u) =>
       (u.username.toLowerCase() === norm ||
         u.email.toLowerCase() === norm ||
@@ -133,36 +182,38 @@ export async function authenticateAsync(identifier: string, password: string): P
     const res = await apiClient.auth.login(norm, password);
     if (res && res.token) {
       setAuthToken(res.token);
+      let roleName = (res.role || 'WORKER').toUpperCase().replace(/^ROLE_/, '');
       return {
-        id: res.employeeId || 'USR-' + res.username,
+        id: res.userId || res.employeeId || 'USR-' + res.username,
         username: res.username,
         password: '',
         name: res.fullName || res.username,
         email: res.email || `${res.username}@transflow.internal`,
-        role: res.role as UserRole,
+        role: roleName as UserRole,
         employeeId: res.employeeId || 'EMP-' + res.username,
-        designation: res.role + ' Specialist',
+        designation: roleName + ' Specialist',
       };
     }
   } catch (err) {
-    console.warn('Backend login attempt fell back to demo users:', err);
+    console.warn('Backend login attempt fell back to demo/registered users:', err);
   }
 
-  // Fallback to local demo users
+  // Fallback to local demo & stored registered users
   return authenticate(identifier, password);
 }
 
-export function isRolePermitted(userRole: UserRole, targetPortal: 'worker' | 'accounts' | 'manager' | 'md' | 'admin'): boolean {
-  // Strict role boundaries as per requirement
-  if (userRole === 'ADMIN') return true; // Admin can access configuration & audit
-  if (userRole === 'MD') return true; // MD can inspect all views
-  if (userRole === 'MANAGER') {
+export function isRolePermitted(userRole: UserRole | string, targetPortal: 'worker' | 'accounts' | 'manager' | 'md' | 'admin'): boolean {
+  if (!userRole) return false;
+  const cleanRole = (userRole || '').toUpperCase().replace(/^ROLE_/, '');
+  if (cleanRole === 'ADMIN') return true;
+  if (cleanRole === 'MD') return true;
+  if (cleanRole === 'MANAGER') {
     return targetPortal === 'manager' || targetPortal === 'worker';
   }
-  if (userRole === 'ACCOUNTS') {
+  if (cleanRole === 'ACCOUNTS') {
     return targetPortal === 'accounts';
   }
-  if (userRole === 'WORKER') {
+  if (cleanRole === 'WORKER') {
     return targetPortal === 'worker';
   }
   return false;

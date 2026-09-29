@@ -143,8 +143,53 @@ export function readStore(): StoreState {
 
 export function writeStore(state: StoreState): void {
   if (typeof window === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORE_STORAGE_KEY);
+    if (raw) {
+      const current = JSON.parse(raw) as StoreState;
+      // If system is in SHUTDOWN, block business entity modifications (trips, invoices, payments, rates, etc.)
+      if (current.systemControl?.systemState === 'SHUTDOWN' && state.systemControl?.systemState === 'SHUTDOWN') {
+        state = {
+          ...current,
+          systemControl: state.systemControl,
+          auditLogs: state.auditLogs,
+          backupRecords: state.backupRecords,
+          backupSchedules: state.backupSchedules,
+          featureFlags: state.featureFlags,
+        };
+      }
+    }
+  } catch {
+    // ignore parse error and proceed
+  }
   localStorage.setItem(STORE_STORAGE_KEY, JSON.stringify(state));
   window.dispatchEvent(new Event('tms:store-update'));
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('tms:system-shutdown', (e: any) => {
+    try {
+      const current = readStore();
+      const detail = e.detail || {};
+      const updatedControl: SystemControlState = {
+        ...current.systemControl,
+        systemState: 'SHUTDOWN',
+        shutdownReason: detail.message || detail.shutdownReason || 'Emergency global system shutdown',
+        shutdownBy: detail.shutdownBy || 'ADMIN',
+        shutdownAt: detail.shutdownAt || new Date().toISOString(),
+      };
+      localStorage.setItem(
+        STORE_STORAGE_KEY,
+        JSON.stringify({
+          ...current,
+          systemControl: updatedControl,
+        })
+      );
+      window.dispatchEvent(new Event('tms:store-update'));
+    } catch {
+      // ignore
+    }
+  });
 }
 
 export function useTmsStore() {

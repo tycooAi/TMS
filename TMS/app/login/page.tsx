@@ -14,11 +14,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const session = getCurrentSession();
-    if (session) {
-      router.replace(getPortalUrl(session.role));
-    }
-  }, [router]);
+    // Ensure form is fresh upon visiting login page
+    setError('');
+    setLoading(false);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,28 +31,32 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    // Fast path: instant local match for demo credentials
-    const localUser = authenticate(normId, password);
-    if (localUser) {
-      setSession(localUser);
+    try {
+      // 1. Fast path: check local demo & stored registered users
+      const localUser = authenticate(normId, password);
+      if (localUser) {
+        setSession(localUser);
+        setLoading(false);
+        authenticateAsync(normId, password).catch(() => {});
+        window.location.href = getPortalUrl(localUser.role);
+        return;
+      }
+
+      // 2. Real Backend path: authenticate against Spring Boot REST API
+      const backendUser = await authenticateAsync(normId, password);
       setLoading(false);
-      router.replace(getPortalUrl(localUser.role));
-      // Acquire backend JWT in background
-      authenticateAsync(normId, password).catch(() => {});
-      return;
+
+      if (backendUser) {
+        setSession(backendUser);
+        window.location.href = getPortalUrl(backendUser.role);
+        return;
+      }
+
+      setError('Invalid username or password. Please use worker / accounts / manager / md / admin with password: password123 (or use 1-Click demo below).');
+    } catch (err: any) {
+      setLoading(false);
+      setError(err?.message || 'Authentication failed. Please verify credentials.');
     }
-
-    // Backend path
-    const backendUser = await authenticateAsync(normId, password);
-    setLoading(false);
-
-    if (backendUser) {
-      setSession(backendUser);
-      router.replace(getPortalUrl(backendUser.role));
-      return;
-    }
-
-    setError('Invalid username or password. Please use worker / accounts / manager / md / admin with password: password123 (or use 1-Click demo below).');
   };
 
   const handleQuickLogin = (role: UserRole) => {
@@ -62,9 +65,8 @@ export default function LoginPage() {
       setIdentifier(user.username);
       setPassword(user.password);
       setSession(user);
-      router.replace(getPortalUrl(user.role));
-      // Background JWT token acquisition
       authenticateAsync(user.username, user.password).catch(() => {});
+      window.location.href = getPortalUrl(user.role);
     }
   };
 

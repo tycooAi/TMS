@@ -49,6 +49,11 @@ public class UserService {
             roleName = roleName.substring(5);
         }
 
+        // Strict Business Rule: Drivers must never receive login credentials or user accounts
+        if ("DRIVER".equalsIgnoreCase(roleName)) {
+            throw new Exceptions.BadRequestException("Drivers do not require application login credentials and cannot have user accounts created.");
+        }
+
         final String lookupRole = roleName;
         Role role = roleRepository.findByName(lookupRole)
                 .orElseGet(() -> roleRepository.findById("ROLE_" + lookupRole)
@@ -86,6 +91,9 @@ public class UserService {
             String roleName = request.getRole().toUpperCase().trim();
             if (roleName.startsWith("ROLE_")) {
                 roleName = roleName.substring(5);
+            }
+            if ("DRIVER".equalsIgnoreCase(roleName)) {
+                throw new Exceptions.BadRequestException("Drivers do not require application login credentials and cannot have user accounts assigned.");
             }
             final String lookupRole = roleName;
             Role role = roleRepository.findByName(lookupRole)

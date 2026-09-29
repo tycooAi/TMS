@@ -35,4 +35,22 @@ public class Exceptions {
             super(message);
         }
     }
+
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public static class ServiceUnavailableException extends RuntimeException {
+        private String code = "SYSTEM_SHUTDOWN";
+
+        public ServiceUnavailableException(String message) {
+            super(message);
+        }
+
+        public ServiceUnavailableException(String code, String message) {
+            super(message);
+            this.code = code;
+        }
+
+        public String getCode() {
+            return code;
+        }
+    }
 }

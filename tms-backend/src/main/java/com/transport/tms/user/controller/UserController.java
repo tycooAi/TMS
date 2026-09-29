@@ -23,28 +23,28 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'USER_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER', 'USER_MANAGE')")
     @Operation(summary = "Get all users")
     public ResponseEntity<ApiResponse<List<AuthDto.UserDto>>> getAllUsers() {
         return ResponseEntity.ok(ApiResponse.ok(userService.getAllUsers()));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'USER_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER', 'USER_MANAGE')")
     @Operation(summary = "Get user by ID")
     public ResponseEntity<ApiResponse<AuthDto.UserDto>> getUserById(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.ok(userService.getUserById(id)));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'USER_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER', 'USER_MANAGE')")
     @Operation(summary = "Create a new user account")
     public ResponseEntity<ApiResponse<AuthDto.UserDto>> createUser(@Valid @RequestBody AuthDto.CreateUserRequest request) {
         return ResponseEntity.ok(ApiResponse.ok("User created successfully", userService.createUser(request)));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'USER_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER', 'USER_MANAGE')")
     @Operation(summary = "Update user details")
     public ResponseEntity<ApiResponse<AuthDto.UserDto>> updateUser(
             @PathVariable String id,
@@ -53,7 +53,7 @@ public class UserController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'USER_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER', 'USER_MANAGE')")
     @Operation(summary = "Update user status (ACTIVE / INACTIVE)")
     public ResponseEntity<ApiResponse<AuthDto.UserDto>> updateUserStatus(
             @PathVariable String id,
@@ -62,7 +62,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'USER_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER', 'USER_MANAGE')")
     @Operation(summary = "Deactivate/delete user")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable String id) {
         userService.deleteUser(id);

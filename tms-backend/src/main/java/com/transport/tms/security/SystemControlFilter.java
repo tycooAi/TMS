@@ -34,7 +34,13 @@ public class SystemControlFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String method = request.getMethod();
 
-        // 1. Whitelisted routes that are always accessible
+        // Allow CORS preflight requests
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // Publicly accessible system monitoring and auth endpoints
         if (isPublicPath(path)) {
             filterChain.doFilter(request, response);
             return;
@@ -44,23 +50,38 @@ public class SystemControlFilter extends OncePerRequestFilter {
         String state = control.getSystemState();
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isAdmin = auth != null && auth.getAuthorities().stream()
+        boolean isAdmin = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equalsIgnoreCase("ROLE_ADMIN"));
 
-        // 2. Global System State Enforcement (SHUTDOWN or MAINTENANCE)
-        if ("SHUTDOWN".equalsIgnoreCase(state) || "MAINTENANCE".equalsIgnoreCase(state)) {
-            if (isAdmin && Boolean.TRUE.equals(control.getAllowAdminBypass())) {
-                // Admin bypass allowed for system management, recovery, and diagnostics
+        // 2. Global System State Enforcement (SHUTDOWN)
+        // In GLOBAL SHUTDOWN: Only Admin recovery, backup, and system-control endpoints remain accessible.
+        // All business operational, financial, and management endpoints are strictly locked with HTTP 503.
+        if ("SHUTDOWN".equalsIgnoreCase(state)) {
+            if (isAdmin && isAdminRecoveryPath(path)) {
+                // Authorized Admin access strictly for system recovery, control, backups, and audits
                 filterChain.doFilter(request, response);
                 return;
             }
 
-            // Block non-admin or unauthenticated requests with HTTP 503
+            // Block all other requests (normal users, unauthenticated, or non-recovery admin requests)
+            log.warn("Blocked request to {} [method={}] during GLOBAL SHUTDOWN (isAdmin={}, user={})",
+                    path, method, isAdmin, auth != null ? auth.getName() : "anonymous");
             writeServiceUnavailable(response, state, control);
             return;
         }
 
-        // 3. Operational Emergency Toggles
+        // 3. Maintenance Mode Enforcement
+        if ("MAINTENANCE".equalsIgnoreCase(state)) {
+            if (isAdmin && Boolean.TRUE.equals(control.getAllowAdminBypass())) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            writeServiceUnavailable(response, state, control);
+            return;
+        }
+
+        // 4. Operational Emergency Toggles (ONLINE mode)
         if (Boolean.FALSE.equals(control.getAllowWorkerTrips()) && !isAdmin) {
             if (path.startsWith("/api/v1/trips") && ("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method))) {
                 writeForbidden(response, "Trip recording is temporarily disabled by System Emergency Controls.");
@@ -97,17 +118,29 @@ public class SystemControlFilter extends OncePerRequestFilter {
                 || path.startsWith("/actuator");
     }
 
+    private boolean isAdminRecoveryPath(String path) {
+        return path.startsWith("/api/v1/system")
+                || path.startsWith("/api/v1/backups")
+                || path.startsWith("/api/v1/audit-logs")
+                || path.startsWith("/api/v1/auth/me")
+                || path.startsWith("/actuator");
+    }
+
     private void writeServiceUnavailable(HttpServletResponse response, String state, SystemControl control) throws IOException {
         response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
         Map<String, Object> body = new HashMap<>();
         body.put("success", false);
-        body.put("systemState", state);
-        body.put("maintenanceTitle", control.getMaintenanceTitle());
+        body.put("code", "SHUTDOWN".equalsIgnoreCase(state) ? "SYSTEM_SHUTDOWN" : "SYSTEM_MAINTENANCE");
         body.put("message", "SHUTDOWN".equalsIgnoreCase(state)
                 ? (control.getShutdownReason() != null ? control.getShutdownReason() : "The entire system has been placed into shutdown mode.")
-                : control.getMaintenanceMessage());
+                : (control.getMaintenanceMessage() != null ? control.getMaintenanceMessage() : "The system is currently undergoing scheduled maintenance."));
+        body.put("systemState", state);
+        body.put("shutdownReason", control.getShutdownReason());
+        body.put("shutdownBy", control.getShutdownBy());
+        body.put("shutdownAt", control.getShutdownAt() != null ? control.getShutdownAt().toString() : null);
+        body.put("maintenanceTitle", control.getMaintenanceTitle());
         body.put("expectedRecoveryTime", control.getExpectedRecoveryTime());
         body.put("allowAdminBypass", control.getAllowAdminBypass());
 

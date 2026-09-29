@@ -37,7 +37,7 @@ async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Pr
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 3500);
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   let response: Response;
   try {
@@ -57,13 +57,34 @@ async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Pr
   if (!response.ok) {
     const errorBody = await response.text();
     let errorMessage = `HTTP Error ${response.status}: ${response.statusText}`;
+    let parsedData: any = null;
     try {
-      const parsed = JSON.parse(errorBody);
-      errorMessage = parsed.message || parsed.error || errorMessage;
+      parsedData = JSON.parse(errorBody);
+      errorMessage = parsedData.message || parsedData.error || errorMessage;
     } catch {
       if (errorBody) errorMessage = errorBody;
     }
-    throw new Error(errorMessage);
+
+    // Backend-Enforced Global Shutdown Detection
+    if (
+      response.status === 503 ||
+      (parsedData && (parsedData.code === 'SYSTEM_SHUTDOWN' || parsedData.systemState === 'SHUTDOWN'))
+    ) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('tms:system-shutdown', {
+            detail: parsedData || { code: 'SYSTEM_SHUTDOWN', message: errorMessage },
+          })
+        );
+      }
+    }
+
+    const error = new Error(errorMessage) as any;
+    if (parsedData) {
+      error.code = parsedData.code;
+      error.data = parsedData;
+    }
+    throw error;
   }
 
   // If 204 No Content
@@ -78,18 +99,11 @@ export const apiClient = {
   // Authentication
   auth: {
     login: async (usernameOrEmail: string, password: string) => {
-      const data = await fetchWithAuth<{
-        token: string;
-        tokenType: string;
-        username: string;
-        fullName: string;
-        email: string;
-        role: string;
-        employeeId: string;
-      }>('/auth/login', {
+      const response = await fetchWithAuth<any>('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ usernameOrEmail, password }),
+        body: JSON.stringify({ username: usernameOrEmail, password }),
       });
+      const data = response && response.data ? response.data : response;
       if (data && data.token) {
         setAuthToken(data.token);
       }
@@ -230,6 +244,36 @@ export const apiClient = {
     updateBackupSchedule: (id: string, payload: any) =>
       fetchWithAuth<any>(`/system/backups/schedules/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
     getDownloadUrl: (id: string) => `${API_BASE_URL}/system/backups/${id}/download`,
+  },
+
+  // User Account Provisioning & Management
+  users: {
+    getAll: () => fetchWithAuth<{ success: boolean; data: any[] }>('/users'),
+    getById: (id: string) => fetchWithAuth<{ success: boolean; data: any }>(`/users/${id}`),
+    create: (userData: {
+      username: string;
+      fullName: string;
+      email?: string;
+      phone?: string;
+      role: string;
+      password?: string;
+    }) =>
+      fetchWithAuth<{ success: boolean; data: any; message?: string }>('/users', {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      }),
+    update: (id: string, userData: any) =>
+      fetchWithAuth<{ success: boolean; data: any; message?: string }>(`/users/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(userData),
+      }),
+    updateStatus: (id: string, status: string) =>
+      fetchWithAuth<{ success: boolean; data: any; message?: string }>(
+        `/users/${id}/status?status=${encodeURIComponent(status)}`,
+        { method: 'PATCH' }
+      ),
+    delete: (id: string) =>
+      fetchWithAuth<{ success: boolean; message?: string }>(`/users/${id}`, { method: 'DELETE' }),
   },
 };
 

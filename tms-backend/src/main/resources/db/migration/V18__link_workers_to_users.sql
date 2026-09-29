@@ -1,0 +1,4 @@
+-- V18: Link Workers to Users and track login eligibility
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS user_id VARCHAR(32) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS username VARCHAR(64);
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS has_login BOOLEAN NOT NULL DEFAULT FALSE;

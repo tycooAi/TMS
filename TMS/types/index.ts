@@ -101,6 +101,9 @@ export interface Worker {
   assignedLocation?: string;
   status: 'ACTIVE' | 'INACTIVE';
   lastLogin?: string;
+  hasLogin?: boolean;
+  username?: string;
+  userId?: string;
 }
 
 export interface Source {

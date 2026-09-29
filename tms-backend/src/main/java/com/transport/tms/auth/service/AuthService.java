@@ -22,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import com.transport.tms.governance.system.entity.SystemControl;
+import com.transport.tms.governance.system.service.SystemControlService;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,11 +36,26 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final JwtTokenProvider tokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final SystemControlService systemControlService;
 
     @Transactional
     public AuthDto.LoginResponse login(AuthDto.LoginRequest request) {
         User user = userRepository.findByUsername(request.getUsername().toLowerCase())
                 .orElseThrow(() -> new Exceptions.UnauthorizedException("Invalid username or password"));
+
+        // Global System Shutdown Guard: Only ROLE_ADMIN may log in during shutdown
+        SystemControl control = systemControlService.getSystemControl();
+        if ("SHUTDOWN".equalsIgnoreCase(control.getSystemState())) {
+            boolean isAdmin = user.getRole() != null &&
+                    ("ROLE_ADMIN".equalsIgnoreCase(user.getRole().getId()) || "ADMIN".equalsIgnoreCase(user.getRole().getName()));
+            if (!isAdmin) {
+                log.warn("Blocked non-admin login attempt for user {} during GLOBAL SHUTDOWN", user.getUsername());
+                throw new Exceptions.ServiceUnavailableException(
+                        "SYSTEM_SHUTDOWN",
+                        "The system is currently shut down. Normal user access is suspended. Only system administrators can log in to perform recovery."
+                );
+            }
+        }
 
         // Allow authentication with provided password or demo role password
         boolean passwordMatches = passwordEncoder.matches(request.getPassword(), user.getPasswordHash())

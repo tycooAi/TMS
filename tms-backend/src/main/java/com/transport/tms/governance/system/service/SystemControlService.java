@@ -94,12 +94,15 @@ public class SystemControlService {
 
         SystemControl saved = systemControlRepository.save(control);
 
-        // Record Audit
+        // Record Audit conforming to enterprise specifications
         String auditAction = switch (targetState) {
-            case "SHUTDOWN" -> "ADMIN → SHUT DOWN SYSTEM";
-            case "MAINTENANCE" -> "ADMIN → ENABLED MAINTENANCE MODE";
-            default -> "ADMIN → RETURNED SYSTEM ONLINE";
+            case "SHUTDOWN" -> "SYSTEM_SHUTDOWN";
+            case "MAINTENANCE" -> "SYSTEM_MAINTENANCE";
+            default -> "SYSTEM_RESUMED";
         };
+
+        String auditReason = request.getReason() != null ? request.getReason()
+                : ("ONLINE".equals(targetState) ? "Administrator resumed system to ONLINE" : "System state transitioned to " + targetState);
 
         auditService.recordAudit(
                 "SYSTEM_CONTROL",
@@ -108,7 +111,7 @@ public class SystemControlService {
                 "systemState",
                 previousState,
                 targetState,
-                request.getReason() != null ? request.getReason() : "System state transitioned to " + targetState,
+                auditReason,
                 performedBy != null ? performedBy : "ADMIN",
                 null
         );

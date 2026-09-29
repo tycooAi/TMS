@@ -14,6 +14,7 @@ import {
   Network,
   Shield,
   Search,
+  Check,
   CheckCircle,
   AlertTriangle,
   RefreshCw,
@@ -281,6 +282,33 @@ export function AdminDashboard() {
           </Link>
         </div>
       </PageHeader>
+
+      {/* GLOBAL SHUTDOWN ALERT STRIP IF ACTIVE */}
+      {currentSystemState === 'SHUTDOWN' && (
+        <div className="p-4 rounded-xl bg-red-950/20 border-2 border-red-500/50 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping" />
+              <strong className="text-xs font-black uppercase tracking-wider text-red-700">
+                GLOBAL SYSTEM SHUTDOWN ACTIVE
+              </strong>
+              <span className="text-[11px] font-mono text-red-600 font-semibold bg-red-100 px-1.5 py-0.5 rounded">
+                HTTP 503 Enforced
+              </span>
+            </div>
+            <p className="text-xs text-slate-700 leading-snug">
+              All normal user portals (Worker, Accounts, Manager, MD) are locked. Only Admin recovery endpoints are accessible.
+            </p>
+          </div>
+          <Link
+            href="/admin/system-control"
+            className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow shrink-0 flex items-center gap-1.5"
+          >
+            <Check size={14} />
+            <span>Go to Resume Control</span>
+          </Link>
+        </div>
+      )}
 
       {/* SYSTEM CONTROL ROOM QUICK HUB */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
