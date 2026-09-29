@@ -9,9 +9,10 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { StatusBadge } from '../ui/StatusBadge';
 import { formatCurrency } from '../../lib/calculations';
-import { Plus, Search, Building2, Check } from '../ui/Icons';
+import { Plus, Search, Building2, Check, FileText } from '../ui/Icons';
 import { Customer } from '../../types';
 import { generateNextId } from '../../lib/ids';
+import { downloadCSV } from '../../lib/csvExport';
 
 export function AccountsCustomers() {
   const searchParams = useSearchParams();
@@ -19,6 +20,7 @@ export function AccountsCustomers() {
 
   const { customers, accounts, createCustomer } = useTmsStore();
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(openNewInitial);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -42,14 +44,46 @@ export function AccountsCustomers() {
 
   const filteredCustomers = customers.filter((c) => {
     const q = query.trim().toLowerCase();
-    return (
+    const matchQ =
       !q ||
       c.name.toLowerCase().includes(q) ||
       c.phone.toLowerCase().includes(q) ||
       c.id.toLowerCase().includes(q) ||
-      (c.gstin && c.gstin.toLowerCase().includes(q))
-    );
+      (c.gstin && c.gstin.toLowerCase().includes(q));
+
+    const matchStatus = statusFilter === 'ALL' || c.status === statusFilter;
+    return matchQ && matchStatus;
   });
+
+  const handleExportCSV = () => {
+    const headers = [
+      'Customer ID',
+      'Customer Name',
+      'Primary Phone',
+      'Alternate Phone',
+      'Address',
+      'GSTIN',
+      'Credit Terms',
+      'Current Balance (₹)',
+      'Total Billed (₹)',
+      'Total Paid (₹)',
+      'Status',
+    ];
+    const rows = filteredCustomers.map((c) => [
+      c.id,
+      c.name,
+      c.phone,
+      c.alternatePhone || '',
+      c.address || '',
+      c.gstin || '',
+      c.creditTerms || 'Standard',
+      c.balance || 0,
+      c.totalCredit || 0,
+      c.totalPaid || 0,
+      c.status,
+    ]);
+    downloadCSV('sri_amman_arul_customers_filtered.csv', headers, rows);
+  };
 
   const handleValidateStep1 = () => {
     setError('');
@@ -133,8 +167,8 @@ export function AccountsCustomers() {
       </PageHeader>
 
       {/* SEARCH AND TOOLS */}
-      <div className="bg-white p-4 rounded-lg border border-[#D9DBD6] mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full sm:w-96">
+      <div className="bg-white p-4 rounded-lg border border-[#D9DBD6] mb-6 flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-2.5 text-[#5A6E7F]" size={16} />
           <input
             type="text"
@@ -145,8 +179,29 @@ export function AccountsCustomers() {
           />
         </div>
 
-        <div className="text-xs text-[#5A6E7F]">
-          Showing <strong>{filteredCustomers.length}</strong> registered customer accounts
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="tms-input w-36"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="ACTIVE">Active Only</option>
+            <option value="INACTIVE">Inactive Only</option>
+          </select>
+
+          <button
+            onClick={handleExportCSV}
+            className="btn-secondary flex items-center gap-1.5 shrink-0"
+            title="Export currently filtered customer accounts to CSV"
+          >
+            <FileText size={14} />
+            Export CSV
+          </button>
+
+          <div className="text-xs text-[#5A6E7F] whitespace-nowrap">
+            Showing <strong>{filteredCustomers.length}</strong> accounts
+          </div>
         </div>
       </div>
 

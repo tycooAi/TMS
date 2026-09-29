@@ -7,9 +7,10 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { StatusBadge } from '../ui/StatusBadge';
 import { formatCurrency } from '../../lib/calculations';
-import { FileText, Plus, Printer, Check } from '../ui/Icons';
+import { FileText, Plus, Printer, Check, Search } from '../ui/Icons';
 import { Invoice, InvoiceLineItem, Trip } from '../../types';
 import { generateNextId } from '../../lib/ids';
+import { downloadCSV } from '../../lib/csvExport';
 
 export function AccountsInvoices() {
   const { invoices, trips, customers, createInvoice } = useTmsStore();
@@ -18,6 +19,11 @@ export function AccountsInvoices() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // List filters
+  const [filterCustomerId, setFilterCustomerId] = useState('ALL');
+  const [filterStatus, setFilterStatus] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // New Invoice generator state
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(customers[0]?.id || '');
@@ -203,17 +209,116 @@ export function AccountsInvoices() {
     }
   };
 
+  const filteredInvoices = invoices.filter((inv) => {
+    const matchesCust = filterCustomerId === 'ALL' || inv.customerId === filterCustomerId;
+    const matchesStatus = filterStatus === 'ALL' || inv.status === filterStatus;
+    const q = searchQuery.trim().toLowerCase();
+    const matchesQ =
+      !q ||
+      inv.invoiceNumber.toLowerCase().includes(q) ||
+      inv.customerName.toLowerCase().includes(q) ||
+      (inv.notes && inv.notes.toLowerCase().includes(q));
+    return matchesCust && matchesStatus && matchesQ;
+  });
+
+  const handleExportCSV = () => {
+    const headers = [
+      'Invoice Number',
+      'Date',
+      'Customer ID',
+      'Customer Name',
+      'Subtotal',
+      'GST Amount',
+      'Total Amount',
+      'Received Amount',
+      'Outstanding Amount',
+      'Status',
+      'Trips / Items',
+      'Notes',
+    ];
+
+    const rows = filteredInvoices.map((inv) => [
+      inv.invoiceNumber,
+      inv.date,
+      inv.customerId,
+      inv.customerName,
+      inv.subtotal,
+      inv.gstAmount,
+      inv.totalAmount,
+      inv.receivedAmount,
+      inv.outstandingAmount,
+      inv.status,
+      inv.lineItems.map((li) => li.tripId || li.material).join('; '),
+      inv.notes || '—',
+    ]);
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const custTag = filterCustomerId !== 'ALL' ? `_${filterCustomerId}` : '';
+    downloadCSV(`tax_invoices${custTag}_${dateStr}.csv`, headers, rows);
+  };
+
   return (
     <div>
       <PageHeader
         title="Commercial Tax Invoices"
         description="Billing lifecycle management · Multi-trip consolidation, GST calculation, and printouts"
       >
-        <button onClick={handleOpenGenerate} className="btn-primary">
-          <Plus size={16} />
-          Generate Invoice
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="btn-secondary text-xs flex items-center gap-1.5"
+            title="Export filtered invoices as CSV"
+          >
+            <FileText size={15} />
+            Export CSV ({filteredInvoices.length})
+          </button>
+          <button onClick={handleOpenGenerate} className="btn-primary">
+            <Plus size={16} />
+            Generate Invoice
+          </button>
+        </div>
       </PageHeader>
+
+      {/* FILTER BAR */}
+      <div className="bg-white p-4 rounded-lg border border-[#D9DBD6] mb-6 flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3 top-2.5 text-[#5A6E7F]" size={15} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search invoice #, customer..."
+            className="tms-input pl-9 text-xs"
+          />
+        </div>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <select
+            value={filterCustomerId}
+            onChange={(e) => setFilterCustomerId(e.target.value)}
+            className="tms-input text-xs w-full sm:w-56"
+          >
+            <option value="ALL">All Customers</option>
+            {customers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} ({c.id})
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="tms-input text-xs w-full sm:w-36"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="PAID">Paid</option>
+            <option value="PENDING">Pending</option>
+            <option value="PARTIAL">Partial</option>
+            <option value="OVERDUE">Overdue</option>
+          </select>
+        </div>
+      </div>
 
       {/* INVOICES TABLE */}
       <div className="table-container">
@@ -234,7 +339,7 @@ export function AccountsInvoices() {
             </tr>
           </thead>
           <tbody>
-            {invoices.map((inv) => (
+            {filteredInvoices.map((inv) => (
               <tr key={inv.id}>
                 <td className="font-bold text-[#2F668F]">
                   <button
@@ -268,10 +373,10 @@ export function AccountsInvoices() {
                 </td>
               </tr>
             ))}
-            {invoices.length === 0 && (
+            {filteredInvoices.length === 0 && (
               <tr>
                 <td colSpan={11} className="text-center py-10 text-[#5A6E7F]">
-                  No invoices generated yet. Click Generate Invoice to bill delivered trips or add direct billing.
+                  No invoices found matching current filters.
                 </td>
               </tr>
             )}
@@ -540,10 +645,8 @@ export function AccountsInvoices() {
             <div className="flex justify-between items-start border-b pb-4">
               <div>
                 <h1 className="text-base font-black text-[#16425B] tracking-wide">
-                  TRANSLOGIX FREIGHT CARRIERS
+                  SRI AMMAN ARUL TRANSPORTS
                 </h1>
-                <p className="text-[11px] text-[#5A6E7F]">Bypass Road, Madurai - 625016, Tamil Nadu</p>
-                <p className="text-[11px] text-[#5A6E7F]">GSTIN: 33AAACT9920A1Z2</p>
               </div>
               <div className="text-right">
                 <span className="font-bold text-sm text-[#2F668F] block">
@@ -651,7 +754,7 @@ export function AccountsInvoices() {
 
             <div className="pt-4 border-t flex justify-between items-center">
               <span className="text-[11px] text-[#5A6E7F]">
-                Computer generated invoice · Authorized Translogix Freight Systems
+                Computer generated invoice · Authorized Sri Amman Arul Transports
               </span>
               <div className="flex gap-2">
                 <button onClick={() => window.print()} className="btn-primary">

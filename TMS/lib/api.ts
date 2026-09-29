@@ -119,6 +119,9 @@ export const apiClient = {
     getAll: () => fetchWithAuth<any[]>('/trips'),
     getById: (id: string) => fetchWithAuth<any>(`/trips/${id}`),
     create: (tripData: any) => fetchWithAuth<any>('/trips', { method: 'POST', body: JSON.stringify(tripData) }),
+    update: (id: string, tripData: any) => fetchWithAuth<any>(`/trips/${id}`, { method: 'PUT', body: JSON.stringify(tripData) }),
+    updateStatus: (id: string, status: string, comment?: string) =>
+      fetchWithAuth<any>(`/trips/${id}/status?status=${encodeURIComponent(status)}${comment ? `&comment=${encodeURIComponent(comment)}` : ''}`, { method: 'PATCH' }),
   },
 
   // Governance & Approvals
@@ -162,4 +165,71 @@ export const apiClient = {
   audit: {
     getLogs: () => fetchWithAuth<any[]>('/audit-logs'),
   },
+
+  // Convenience Endpoints for Portal Operations
+  vehicles: {
+    getAll: () => fetchWithAuth<any[]>('/vehicles'),
+    create: (data: any) => fetchWithAuth<any>('/vehicles', { method: 'POST', body: JSON.stringify(data) }),
+  },
+  drivers: {
+    getAll: () => fetchWithAuth<any[]>('/drivers'),
+    create: (data: any) => fetchWithAuth<any>('/drivers', { method: 'POST', body: JSON.stringify(data) }),
+  },
+  customers: {
+    getAll: () => fetchWithAuth<any[]>('/customers'),
+    create: (data: any) => fetchWithAuth<any>('/customers', { method: 'POST', body: JSON.stringify(data) }),
+  },
+  approvals: {
+    getPending: () => fetchWithAuth<any[]>('/approvals/pending'),
+    approve: (id: string, comments: string = 'Approved') =>
+      fetchWithAuth<any>(`/approvals/${id}/approve`, { method: 'POST', body: JSON.stringify({ comments }) }),
+    reject: (id: string, comments: string) =>
+      fetchWithAuth<any>(`/approvals/${id}/reject`, { method: 'POST', body: JSON.stringify({ comments }) }),
+    submitCorrectionRequest: (data: any) =>
+      fetchWithAuth<any>('/approvals/correction-requests', { method: 'POST', body: JSON.stringify(data) }),
+  },
+
+  // System Control Center & Governance
+  system: {
+    getStatus: () => fetchWithAuth<{ success: boolean; data: any }>('/system/status'),
+    changeState: (payload: {
+      systemState: 'ONLINE' | 'MAINTENANCE' | 'SHUTDOWN';
+      confirmationText?: string;
+      reason?: string;
+      maintenanceTitle?: string;
+      maintenanceMessage?: string;
+      expectedRecoveryTime?: string | null;
+      allowAdminBypass?: boolean;
+    }) =>
+      fetchWithAuth<any>('/system/state', { method: 'POST', body: JSON.stringify(payload) }),
+    emergencyToggle: (payload: {
+      allowWorkerTrips?: boolean;
+      allowAccountsPayments?: boolean;
+      lockSensitiveOps?: boolean;
+      reason?: string;
+    }) =>
+      fetchWithAuth<any>('/system/emergency-toggle', { method: 'POST', body: JSON.stringify(payload) }),
+    getHealth: () => fetchWithAuth<{ success: boolean; data: any }>('/system/health'),
+    getActiveSessions: () => fetchWithAuth<{ success: boolean; data: any[] }>('/system/sessions'),
+    getFeatureFlags: () => fetchWithAuth<{ success: boolean; data: any[] }>('/system/features'),
+    toggleFeatureFlag: (flagKey: string, enabled: boolean) =>
+      fetchWithAuth<any>(`/system/features/${flagKey}/toggle`, {
+        method: 'POST',
+        body: JSON.stringify({ enabled }),
+      }),
+    getBackups: () => fetchWithAuth<{ success: boolean; data: any[] }>('/system/backups'),
+    createBackup: (payload?: { backupType?: string; notes?: string }) =>
+      fetchWithAuth<any>('/system/backups/create', { method: 'POST', body: JSON.stringify(payload || {}) }),
+    verifyBackup: (id: string) =>
+      fetchWithAuth<any>(`/system/backups/${id}/verify`, { method: 'POST', body: JSON.stringify({}) }),
+    restoreBackup: (id: string, payload: { confirmationText: string; reason?: string }) =>
+      fetchWithAuth<any>(`/system/backups/${id}/restore`, { method: 'POST', body: JSON.stringify(payload) }),
+    deleteBackup: (id: string) =>
+      fetchWithAuth<any>(`/system/backups/${id}`, { method: 'DELETE' }),
+    getBackupSchedules: () => fetchWithAuth<{ success: boolean; data: any[] }>('/system/backups/schedules'),
+    updateBackupSchedule: (id: string, payload: any) =>
+      fetchWithAuth<any>(`/system/backups/schedules/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    getDownloadUrl: (id: string) => `${API_BASE_URL}/system/backups/${id}/download`,
+  },
 };
+

@@ -47,15 +47,26 @@ public class TripService {
 
         BigDecimal appliedRate = BigDecimal.ZERO;
         BigDecimal totalAmount = BigDecimal.ZERO;
+        BigDecimal billingRate = request.getBillingRate() != null ? request.getBillingRate() : BigDecimal.ZERO;
+        BigDecimal transportRate = request.getTransportRate() != null ? request.getTransportRate() : BigDecimal.ZERO;
+        BigDecimal purchaseRate = request.getPurchaseRate() != null ? request.getPurchaseRate() : BigDecimal.ZERO;
+        BigDecimal perKmRate = request.getPerKmRate() != null ? request.getPerKmRate() : BigDecimal.valueOf(28.00);
 
         if (!isNoLoad) {
-            // Rate freezing at the moment of creation
-            appliedRate = rateCardService.resolveRate(
-                    customer.getId(),
-                    request.getMaterial(),
-                    request.getLoadingLocation(),
-                    request.getDeliveryLocation()
-            );
+            if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new Exceptions.BadRequestException("Quantity must be greater than zero for loaded trips");
+            }
+            if (billingRate.compareTo(BigDecimal.ZERO) > 0) {
+                appliedRate = billingRate;
+            } else {
+                appliedRate = rateCardService.resolveRate(
+                        customer.getId(),
+                        request.getMaterial(),
+                        request.getLoadingLocation(),
+                        request.getDeliveryLocation()
+                );
+                billingRate = appliedRate;
+            }
             totalAmount = request.getQuantity().multiply(appliedRate);
         }
 
@@ -89,10 +100,14 @@ public class TripService {
                 .closingKm(request.getClosingKm())
                 .tripKm(request.getTripKm())
                 .appliedRate(appliedRate)
-                .rateUnit("Ton")
+                .billingRate(billingRate)
+                .transportRate(transportRate)
+                .purchaseRate(purchaseRate)
+                .perKmRate(perKmRate)
+                .rateUnit(request.getUnit() != null ? request.getUnit() : "Ton")
                 .totalAmount(totalAmount)
-                .status("DELIVERED")
-                .progress(7)
+                .status(isNoLoad ? "NO_LOAD" : (request.getStatus() != null && !request.getStatus().isBlank() ? request.getStatus() : "RUNNING"))
+                .progress(isNoLoad ? 7 : 5)
                 .isNoLoad(isNoLoad)
                 .noLoadReason(request.getNoLoadReason())
                 .enteredBy(currentUser.getFullName())
@@ -207,21 +222,38 @@ public class TripService {
         if (request.getOpeningKm() != null) trip.setOpeningKm(request.getOpeningKm());
         if (request.getClosingKm() != null) trip.setClosingKm(request.getClosingKm());
         if (request.getTripKm() != null) trip.setTripKm(request.getTripKm());
+        if (request.getUnloadQuantity() != null) trip.setUnloadQuantity(request.getUnloadQuantity());
+        if (request.getUnloadUnit() != null) trip.setUnloadUnit(request.getUnloadUnit());
+        if (request.getShortage() != null) trip.setShortage(request.getShortage());
+        if (request.getLoadingDateTime() != null) trip.setLoadingDateTime(request.getLoadingDateTime());
+        if (request.getDepartureDateTime() != null) trip.setDepartureDateTime(request.getDepartureDateTime());
+        if (request.getDeliveryDateTime() != null) trip.setDeliveryDateTime(request.getDeliveryDateTime());
+        if (request.getDeliveryProof() != null) trip.setDeliveryProof(request.getDeliveryProof());
+
+        if (request.getBillingRate() != null) trip.setBillingRate(request.getBillingRate());
+        if (request.getTransportRate() != null) trip.setTransportRate(request.getTransportRate());
+        if (request.getPurchaseRate() != null) trip.setPurchaseRate(request.getPurchaseRate());
+        if (request.getPerKmRate() != null) trip.setPerKmRate(request.getPerKmRate());
 
         boolean isNoLoad = Boolean.TRUE.equals(request.getIsNoLoad());
         trip.setIsNoLoad(isNoLoad);
         trip.setNoLoadReason(request.getNoLoadReason());
 
         if (!isNoLoad) {
-            BigDecimal appliedRate = rateCardService.resolveRate(
-                    trip.getCustomerId(),
-                    trip.getMaterial(),
-                    trip.getLoadingLocation(),
-                    trip.getDeliveryLocation()
-            );
-            trip.setAppliedRate(appliedRate);
+            BigDecimal effectiveBilling = trip.getBillingRate() != null && trip.getBillingRate().compareTo(BigDecimal.ZERO) > 0
+                    ? trip.getBillingRate()
+                    : rateCardService.resolveRate(
+                            trip.getCustomerId(),
+                            trip.getMaterial(),
+                            trip.getLoadingLocation(),
+                            trip.getDeliveryLocation()
+                    );
+            trip.setAppliedRate(effectiveBilling);
+            if (trip.getBillingRate() == null || trip.getBillingRate().compareTo(BigDecimal.ZERO) == 0) {
+                trip.setBillingRate(effectiveBilling);
+            }
             if (trip.getQuantity() != null) {
-                trip.setTotalAmount(trip.getQuantity().multiply(appliedRate));
+                trip.setTotalAmount(trip.getQuantity().multiply(effectiveBilling));
             }
         } else {
             trip.setAppliedRate(BigDecimal.ZERO);
@@ -274,6 +306,10 @@ public class TripService {
                 .closingKm(trip.getClosingKm())
                 .tripKm(trip.getTripKm())
                 .appliedRate(trip.getAppliedRate())
+                .billingRate(trip.getBillingRate())
+                .transportRate(trip.getTransportRate())
+                .purchaseRate(trip.getPurchaseRate())
+                .perKmRate(trip.getPerKmRate())
                 .rateUnit(trip.getRateUnit())
                 .totalAmount(trip.getTotalAmount())
                 .status(trip.getStatus())
@@ -324,6 +360,11 @@ public class TripService {
                 .enteredBy(trip.getEnteredBy())
                 .notes(trip.getNotes())
                 .deliveryProof(trip.getDeliveryProof())
+                .billingRate(trip.getBillingRate())
+                .transportRate(trip.getTransportRate())
+                .purchaseRate(trip.getPurchaseRate())
+                .perKmRate(trip.getPerKmRate())
+                .appliedRate(trip.getAppliedRate())
                 .createdAt(trip.getCreatedAt())
                 .build();
     }

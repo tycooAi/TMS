@@ -102,6 +102,22 @@ public class Trip {
     @Builder.Default
     private BigDecimal appliedRate = BigDecimal.ZERO;
 
+    @Column(precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal billingRate = BigDecimal.ZERO;
+
+    @Column(precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal transportRate = BigDecimal.ZERO;
+
+    @Column(precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal purchaseRate = BigDecimal.ZERO;
+
+    @Column(precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal perKmRate = BigDecimal.ZERO;
+
     @Column(nullable = false, length = 32)
     @Builder.Default
     private String rateUnit = "Ton";

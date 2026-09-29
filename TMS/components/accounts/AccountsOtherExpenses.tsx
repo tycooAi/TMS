@@ -7,12 +7,17 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { StatusBadge } from '../ui/StatusBadge';
 import { formatCurrency } from '../../lib/calculations';
-import { Plus } from '../ui/Icons';
+import { Plus, Search, FileText } from '../ui/Icons';
 import { OtherExpense } from '../../types';
 import { generateNextId } from '../../lib/ids';
+import { downloadCSV } from '../../lib/csvExport';
 
 export function AccountsOtherExpenses() {
   const { otherExpenses, accounts, recordOtherExpense } = useTmsStore();
+
+  const [query, setQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState('ALL');
+  const [filterAccount, setFilterAccount] = useState('ALL');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -24,6 +29,49 @@ export function AccountsOtherExpenses() {
   const [targetAccount, setTargetAccount] = useState<string>(accounts[0]?.name || 'Cash in Hand');
   const [referenceBill, setReferenceBill] = useState('');
   const [error, setError] = useState('');
+
+  const filteredOtherExpenses = otherExpenses.filter((e) => {
+    const q = query.trim().toLowerCase();
+    const matchesQ =
+      !q ||
+      e.id.toLowerCase().includes(q) ||
+      e.description.toLowerCase().includes(q) ||
+      e.category.toLowerCase().includes(q) ||
+      (e.referenceBill && e.referenceBill.toLowerCase().includes(q));
+
+    const matchesCategory = filterCategory === 'ALL' || e.category === filterCategory;
+    const matchesAccount = filterAccount === 'ALL' || e.account === filterAccount;
+
+    return matchesQ && matchesCategory && matchesAccount;
+  });
+
+  const handleExportCSV = () => {
+    const headers = [
+      'Voucher ID',
+      'Date',
+      'Time',
+      'Category',
+      'Description',
+      'Amount (₹)',
+      'Payment Mode',
+      'Account',
+      'Reference Bill',
+      'Status',
+    ];
+    const rows = filteredOtherExpenses.map((e) => [
+      e.id,
+      e.date,
+      e.time,
+      e.category,
+      e.description,
+      e.amount,
+      e.paymentMode,
+      e.account,
+      e.referenceBill || '',
+      e.status,
+    ]);
+    downloadCSV('sri_amman_arul_other_expenses_filtered.csv', headers, rows);
+  };
 
   const totalOtherExpenses = otherExpenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -79,12 +127,61 @@ export function AccountsOtherExpenses() {
       </PageHeader>
 
       <div className="bg-white rounded-lg border border-[#D9DBD6] p-5">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
           <div>
             <h2 className="text-sm font-bold text-[#16425B]">Other Operational Vouchers</h2>
             <p className="text-xs text-[#5A6E7F]">
               Total Cumulative: <strong>{formatCurrency(totalOtherExpenses)}</strong>
             </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+            <div className="relative w-full md:w-56">
+              <Search className="absolute left-3 top-2.5 text-[#5A6E7F]" size={15} />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search voucher, bill..."
+                className="tms-input pl-8 py-1.5 text-xs"
+              />
+            </div>
+
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="tms-input py-1.5 text-xs w-36"
+            >
+              <option value="ALL">All Categories</option>
+              <option value="Office Expense">Office Expense</option>
+              <option value="Refreshments">Refreshments</option>
+              <option value="Travel">Travel</option>
+              <option value="Repairs & Tools">Repairs & Tools</option>
+              <option value="Postage & Printing">Postage & Printing</option>
+              <option value="Miscellaneous">Miscellaneous</option>
+            </select>
+
+            <select
+              value={filterAccount}
+              onChange={(e) => setFilterAccount(e.target.value)}
+              className="tms-input py-1.5 text-xs w-36"
+            >
+              <option value="ALL">All Accounts</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.name}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+
+            <button
+              onClick={handleExportCSV}
+              className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5 shrink-0"
+              title="Export filtered vouchers to CSV"
+            >
+              <FileText size={14} />
+              Export CSV
+            </button>
           </div>
         </div>
 
@@ -104,7 +201,7 @@ export function AccountsOtherExpenses() {
               </tr>
             </thead>
             <tbody>
-              {otherExpenses.map((e) => (
+              {filteredOtherExpenses.map((e) => (
                 <tr key={e.id}>
                   <td className="font-bold text-[#2F668F]">{e.id}</td>
                   <td>{e.date} {e.time}</td>

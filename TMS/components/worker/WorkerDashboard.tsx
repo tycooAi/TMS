@@ -72,7 +72,7 @@ export function WorkerDashboard() {
           note="Ready for loading"
         />
         <KpiCard
-          label="In-Transit / Pending Deliveries"
+          label="Pending Deliveries"
           value={pendingDeliveries}
           note="Running on route"
         />

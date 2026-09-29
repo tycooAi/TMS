@@ -3,12 +3,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   AuditLog,
+  BackupRecord,
+  BackupSchedule,
   CashBankAccount,
   ConfiguredRate,
   CorrectionRequest,
   Customer,
   DieselRecord,
   Driver,
+  FeatureFlag,
   Invoice,
   LocationItem,
   Material,
@@ -16,6 +19,7 @@ import {
   Payment,
   Source,
   FinancialTransaction,
+  SystemControlState,
   Trip,
   TripStatus,
   Vehicle,
@@ -46,6 +50,36 @@ import { generateNextId } from './ids';
 
 export const STORE_STORAGE_KEY = 'tms_unified_store_v2';
 
+export const initialSystemControl: SystemControlState = {
+  id: 1,
+  systemState: 'ONLINE',
+  maintenanceTitle: 'System Maintenance',
+  maintenanceMessage: 'The system is currently undergoing scheduled maintenance. Please check back shortly.',
+  expectedRecoveryTime: null,
+  shutdownReason: null,
+  shutdownBy: null,
+  shutdownAt: null,
+  allowAdminBypass: true,
+  allowWorkerTrips: true,
+  allowAccountsPayments: true,
+  lockSensitiveOps: false,
+  updatedBy: 'SYSTEM',
+};
+
+export const initialFeatureFlags: FeatureFlag[] = [
+  { flagKey: 'WORKER_NEW_TRIP', name: 'Worker New Trip Creation', description: 'Allows field workers to dispatch and record new freight trips', category: 'OPERATIONS', enabled: true, updatedBy: 'SYSTEM' },
+  { flagKey: 'ACCOUNTS_PAYMENTS', name: 'Accounts Payment Processing', description: 'Allows accounting staff to record collections, debit vouchers, and contra entries', category: 'FINANCE', enabled: true, updatedBy: 'SYSTEM' },
+  { flagKey: 'REPORTS_GENERATION', name: 'Financial & Ledger Reports', description: 'Enables generation and CSV/Excel export of GST ledgers and profitability reports', category: 'REPORTING', enabled: true, updatedBy: 'SYSTEM' },
+  { flagKey: 'NEW_CUSTOMER_CREATION', name: 'Client Onboarding', description: 'Allows creating new client masters with credit policies and GSTINs', category: 'MASTERS', enabled: true, updatedBy: 'SYSTEM' },
+  { flagKey: 'ONLINE_APIS', name: 'External REST API Gateways', description: 'Enables partner ERP and tracking webhooks', category: 'INTEGRATIONS', enabled: true, updatedBy: 'SYSTEM' },
+  { flagKey: 'MAINTENANCE_OVERRIDE', name: 'Admin Emergency Bypass', description: 'Allows Super Admins to bypass maintenance restriction filters', category: 'SECURITY', enabled: true, updatedBy: 'SYSTEM' },
+];
+
+export const initialBackupSchedules: BackupSchedule[] = [
+  { id: 'WEEKLY', scheduleType: 'WEEKLY', enabled: true, dayOfWeek: 7, dayOfMonth: 1, executionTime: '02:00', retentionCount: 4, destination: 'LOCAL_SNAPSHOT_STORE', updatedBy: 'SYSTEM' },
+  { id: 'MONTHLY', scheduleType: 'MONTHLY', enabled: true, dayOfWeek: 7, dayOfMonth: 1, executionTime: '03:00', retentionCount: 12, destination: 'LOCAL_SNAPSHOT_STORE', updatedBy: 'SYSTEM' },
+];
+
 export interface StoreState {
   customers: Customer[];
   vehicles: Vehicle[];
@@ -65,6 +99,10 @@ export interface StoreState {
   accounts: CashBankAccount[];
   corrections: CorrectionRequest[];
   auditLogs: AuditLog[];
+  systemControl: SystemControlState;
+  featureFlags: FeatureFlag[];
+  backupRecords: BackupRecord[];
+  backupSchedules: BackupSchedule[];
 }
 
 export const defaultState: StoreState = {
@@ -86,6 +124,10 @@ export const defaultState: StoreState = {
   accounts: initialAccounts,
   corrections: initialCorrections,
   auditLogs: initialAuditLogs,
+  systemControl: initialSystemControl,
+  featureFlags: initialFeatureFlags,
+  backupRecords: [],
+  backupSchedules: initialBackupSchedules,
 };
 
 export function readStore(): StoreState {
@@ -158,6 +200,31 @@ export function useTmsStore() {
         entityId: trip.id,
         description: `Created trip for ${trip.customerName} (${trip.material}, ${trip.quantity} ${trip.unit})`,
         newValue: trip.status,
+      });
+    },
+    [addAudit]
+  );
+
+  const updateTrip = useCallback(
+    (trip: Trip, actorName = 'Arun Kumar') => {
+      const current = readStore();
+      const existing = current.trips.find((t) => t.id === trip.id);
+      if (!existing) return;
+
+      const updatedTrips = current.trips.map((t) =>
+        t.id === trip.id ? { ...existing, ...trip } : t
+      );
+      writeStore({
+        ...current,
+        trips: updatedTrips,
+      });
+      addAudit({
+        user: actorName,
+        userRole: 'WORKER',
+        action: 'UPDATE',
+        entity: 'TRIP',
+        entityId: trip.id,
+        description: `Updated trip for ${trip.customerName} (${trip.material}, ${trip.quantity} ${trip.unit})`,
       });
     },
     [addAudit]
@@ -546,6 +613,49 @@ export function useTmsStore() {
     [addAudit]
   );
 
+  // Manager: Update Worker Wage
+  const updateWorkerWage = useCallback(
+    (
+      workerId: string,
+      newWage: number,
+      effectiveDate: string,
+      reason: string,
+      actorName = 'Rajesh V'
+    ) => {
+      const current = readStore();
+      const worker = current.workers.find((w) => w.id === workerId);
+      if (!worker) return;
+
+      const previousWage = worker.salary;
+      const nextWorkers = current.workers.map((w) =>
+        w.id === workerId
+          ? {
+              ...w,
+              salary: newWage,
+            }
+          : w
+      );
+
+      writeStore({
+        ...current,
+        workers: nextWorkers,
+      });
+
+      addAudit({
+        user: actorName,
+        userRole: 'MANAGER',
+        action: 'UPDATE',
+        entity: 'WORKER_WAGE',
+        entityId: workerId,
+        description: `Updated wage for ${worker.name} from ₹${previousWage} to ₹${newWage} effective ${effectiveDate}`,
+        oldValue: `₹${previousWage}`,
+        newValue: `₹${newWage}`,
+        reason: reason || 'Authorized wage revision by Manager',
+      });
+    },
+    [addAudit]
+  );
+
   // Accounts: Diesel Logging
   const recordDiesel = useCallback(
     (record: DieselRecord, actorName = 'Anitha S') => {
@@ -568,7 +678,13 @@ export function useTmsStore() {
       // Update vehicle current KM
       const nextVehicles = current.vehicles.map((v) =>
         v.registration === record.vehicleRegistration
-          ? { ...v, currentKm: Math.max(v.currentKm, record.endKm) }
+          ? {
+              ...v,
+              currentKm:
+                record.endKm !== undefined
+                  ? Math.max(v.currentKm, record.endKm)
+                  : v.currentKm + (record.distanceKm || 0),
+            }
           : v
       );
 
@@ -848,19 +964,42 @@ export function useTmsStore() {
         return t;
       });
 
+      let nextCustomers = current.customers;
+      if (req.entityType === 'CUSTOMER' || req.transactionId?.startsWith('CUS-')) {
+        try {
+          const parsed = JSON.parse(req.requestedValue);
+          nextCustomers = current.customers.map((c) => {
+            if (c.id === req.transactionId) {
+              return {
+                ...c,
+                name: parsed.name !== undefined ? parsed.name : c.name,
+                phone: parsed.phone !== undefined ? parsed.phone : c.phone,
+                address: parsed.address !== undefined ? parsed.address : c.address,
+                creditTerms: parsed.creditTerms !== undefined ? parsed.creditTerms : c.creditTerms,
+                gstin: parsed.gstin !== undefined ? parsed.gstin : c.gstin,
+              };
+            }
+            return c;
+          });
+        } catch {
+          // fallback if requestedValue is plain string
+        }
+      }
+
       writeStore({
         ...current,
         corrections: nextCorrections,
         transactions: nextTx,
+        customers: nextCustomers,
       });
 
       addAudit({
         user: approverName,
-        userRole: 'MD',
+        userRole: 'MANAGER',
         action: 'APPROVE',
-        entity: 'CORRECTION_REQUEST',
-        entityId: requestId,
-        description: `Approved correction for transaction ${req.transactionId}. Applied new value: ${req.requestedValue}`,
+        entity: req.entityType === 'CUSTOMER' ? 'CUSTOMER' : 'CORRECTION_REQUEST',
+        entityId: req.transactionId || requestId,
+        description: `Approved customer change request for ${req.transactionId}. Applied requested changes.`,
         oldValue: req.originalValue,
         newValue: req.requestedValue,
         reason: req.reason,
@@ -998,6 +1137,240 @@ export function useTmsStore() {
     [saveMasterItem]
   );
 
+  const updateCustomer = useCallback(
+    (customer: Customer, actorName = 'Admin') => {
+      saveMasterItem('customers', customer, 'id', actorName);
+      addAudit({
+        user: actorName,
+        userRole: 'ADMIN',
+        action: 'UPDATE',
+        entity: 'CUSTOMER',
+        entityId: customer.id,
+        description: `Admin updated customer master: ${customer.name}`,
+      });
+    },
+    [saveMasterItem, addAudit]
+  );
+
+  const archiveCustomer = useCallback(
+    (id: string, reason: string, actorName = 'Admin') => {
+      const current = readStore();
+      const target = current.customers.find((c) => c.id === id);
+      if (!target) return;
+      const updatedCustomers = current.customers.map((c) =>
+        c.id === id ? { ...c, status: ('INACTIVE' as const), notes: (c.notes ? c.notes + ' | ' : '') + `Archived: ${reason}` } : c
+      );
+      writeStore({
+        ...current,
+        customers: updatedCustomers,
+      });
+      addAudit({
+        user: actorName,
+        userRole: 'ADMIN',
+        action: 'STATUS_CHANGE',
+        entity: 'CUSTOMER',
+        entityId: id,
+        description: `Archived customer ${target.name}. Reason: ${reason}`,
+        oldValue: target.status,
+        newValue: 'INACTIVE',
+        reason,
+      });
+    },
+    [addAudit]
+  );
+
+  const updateSystemControl = useCallback(
+    (ctrl: Partial<SystemControlState>, actorName = 'Admin') => {
+      const current = readStore();
+      const updated: SystemControlState = {
+        ...current.systemControl,
+        ...ctrl,
+        updatedBy: actorName,
+        updatedAt: new Date().toISOString(),
+      };
+      writeStore({
+        ...current,
+        systemControl: updated,
+      });
+      addAudit({
+        user: actorName,
+        userRole: 'ADMIN',
+        action: 'UPDATE',
+        entity: 'SYSTEM_CONTROL',
+        entityId: '1',
+        description: `Updated system control settings (state: ${updated.systemState})`,
+      });
+    },
+    [addAudit]
+  );
+
+  const setSystemState = useCallback(
+    (state: 'ONLINE' | 'MAINTENANCE' | 'SHUTDOWN', reason?: string, actorName = 'Admin') => {
+      const current = readStore();
+      const oldState = current.systemControl.systemState;
+      const updated: SystemControlState = {
+        ...current.systemControl,
+        systemState: state,
+        shutdownReason: state === 'SHUTDOWN' ? (reason || 'Global shutdown invoked') : null,
+        shutdownBy: state === 'SHUTDOWN' ? actorName : null,
+        shutdownAt: state === 'SHUTDOWN' ? new Date().toISOString() : null,
+        updatedBy: actorName,
+        updatedAt: new Date().toISOString(),
+      };
+      writeStore({
+        ...current,
+        systemControl: updated,
+      });
+      addAudit({
+        user: actorName,
+        userRole: 'ADMIN',
+        action: 'STATUS_CHANGE',
+        entity: 'SYSTEM_CONTROL',
+        entityId: '1',
+        description: `Transitioned system state from ${oldState} to ${state}`,
+        oldValue: oldState,
+        newValue: state,
+        reason: reason || `Admin transitioned state to ${state}`,
+      });
+    },
+    [addAudit]
+  );
+
+  const toggleFeatureFlag = useCallback(
+    (flagKey: string, enabled: boolean, actorName = 'Admin') => {
+      const current = readStore();
+      const updatedFlags = current.featureFlags.map((f) =>
+        f.flagKey === flagKey ? { ...f, enabled, updatedBy: actorName, updatedAt: new Date().toISOString() } : f
+      );
+      writeStore({
+        ...current,
+        featureFlags: updatedFlags,
+      });
+      addAudit({
+        user: actorName,
+        userRole: 'ADMIN',
+        action: 'UPDATE',
+        entity: 'FEATURE_FLAG',
+        entityId: flagKey,
+        description: `Feature flag ${flagKey} toggled to ${enabled ? 'ENABLED' : 'DISABLED'}`,
+        newValue: enabled ? 'ENABLED' : 'DISABLED',
+      });
+    },
+    [addAudit]
+  );
+
+  const addBackupRecord = useCallback(
+    (record: BackupRecord, actorName = 'Admin') => {
+      const current = readStore();
+      writeStore({
+        ...current,
+        backupRecords: [record, ...current.backupRecords],
+      });
+      addAudit({
+        user: actorName,
+        userRole: 'ADMIN',
+        action: 'CREATE',
+        entity: 'BACKUP',
+        entityId: record.id,
+        description: `Created database snapshot: ${record.backupName} (${(record.fileSizeBytes / 1024).toFixed(1)} KB)`,
+      });
+    },
+    [addAudit]
+  );
+
+  const verifyBackup = useCallback(
+    (id: string, actorName = 'Admin') => {
+      const current = readStore();
+      const updatedBackups = current.backupRecords.map((b) =>
+        b.id === id ? { ...b, status: ('VERIFIED' as const), verifiedAt: new Date().toISOString() } : b
+      );
+      writeStore({
+        ...current,
+        backupRecords: updatedBackups,
+      });
+      addAudit({
+        user: actorName,
+        userRole: 'ADMIN',
+        action: 'STATUS_CHANGE',
+        entity: 'BACKUP',
+        entityId: id,
+        description: `Verified backup snapshot integrity: ${id}`,
+        newValue: 'VERIFIED',
+      });
+    },
+    [addAudit]
+  );
+
+  const restoreBackup = useCallback(
+    (id: string, confirmationText: string, reason?: string, actorName = 'Admin') => {
+      const current = readStore();
+      const target = current.backupRecords.find((b) => b.id === id);
+      if (!target) return;
+      const updatedBackups = current.backupRecords.map((b) =>
+        b.id === id ? { ...b, status: ('RESTORED' as const), restoredAt: new Date().toISOString() } : b
+      );
+      writeStore({
+        ...current,
+        backupRecords: updatedBackups,
+      });
+      addAudit({
+        user: actorName,
+        userRole: 'ADMIN',
+        action: 'STATUS_CHANGE',
+        entity: 'BACKUP',
+        entityId: id,
+        description: `Restored database to snapshot point ${id}. Reason: ${reason || 'Point-in-time recovery'}`,
+        newValue: 'RESTORED',
+        reason,
+      });
+    },
+    [addAudit]
+  );
+
+  const deleteBackup = useCallback(
+    (id: string, actorName = 'Admin') => {
+      const current = readStore();
+      if (current.backupRecords.length <= 1) {
+        throw new Error('Cannot delete the only available recovery point. At least one backup must be retained.');
+      }
+      writeStore({
+        ...current,
+        backupRecords: current.backupRecords.filter((b) => b.id !== id),
+      });
+      addAudit({
+        user: actorName,
+        userRole: 'ADMIN',
+        action: 'DELETE',
+        entity: 'BACKUP',
+        entityId: id,
+        description: `Deleted backup point ${id}`,
+      });
+    },
+    [addAudit]
+  );
+
+  const updateBackupSchedule = useCallback(
+    (id: string, schedule: Partial<BackupSchedule>, actorName = 'Admin') => {
+      const current = readStore();
+      const updated = current.backupSchedules.map((s) =>
+        s.id === id ? { ...s, ...schedule, updatedBy: actorName, updatedAt: new Date().toISOString() } : s
+      );
+      writeStore({
+        ...current,
+        backupSchedules: updated,
+      });
+      addAudit({
+        user: actorName,
+        userRole: 'ADMIN',
+        action: 'UPDATE',
+        entity: 'BACKUP_SCHEDULE',
+        entityId: id,
+        description: `Updated backup schedule ${id}`,
+      });
+    },
+    [addAudit]
+  );
+
   const resetToDefaults = useCallback(() => {
     writeStore(defaultState);
   }, []);
@@ -1005,13 +1378,17 @@ export function useTmsStore() {
   return {
     ...state,
     createTrip,
+    updateTrip,
     updateTripStatus,
     createCustomer,
+    updateCustomer,
+    archiveCustomer,
     createVehicle,
     createDriver,
     createInvoice,
     recordCustomerPayment,
     recordWorkerWage,
+    updateWorkerWage,
     recordDiesel,
     recordVehicleExpense,
     recordOtherExpense,
@@ -1021,6 +1398,14 @@ export function useTmsStore() {
     rejectCorrection,
     saveMasterItem,
     deleteMasterItem,
+    updateSystemControl,
+    setSystemState,
+    toggleFeatureFlag,
+    addBackupRecord,
+    verifyBackup,
+    restoreBackup,
+    deleteBackup,
+    updateBackupSchedule,
     addAudit,
     resetToDefaults,
   };

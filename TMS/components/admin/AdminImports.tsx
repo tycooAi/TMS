@@ -204,10 +204,10 @@ export function AdminImports() {
         };
         reader.readAsText(file);
       } else if (extension === 'xlsx' || extension === 'xls') {
-        // Dynamic import of xlsx library for binary excel files
         try {
-          // @ts-ignore
-          const XLSX = await import('xlsx');
+          // Dynamic import of xlsx library for binary excel files
+          const importXlsx = new Function('m', 'return import(m)');
+          const XLSX = await importXlsx('xlsx');
           const reader = new FileReader();
           reader.onload = (e) => {
             try {

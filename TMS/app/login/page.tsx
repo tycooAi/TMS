@@ -76,11 +76,8 @@ export default function LoginPage() {
           <Truck size={28} />
         </div>
         <h1 className="text-2xl font-black text-[#16425B] tracking-tight">
-          TRANSLOGIX TMS
+          SRI AMMAN ARUL TRANSPORTS
         </h1>
-        <p className="text-xs font-semibold text-[#3B7CA6] uppercase tracking-widest mt-1">
-          Transportation Management Web System
-        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTmsStore } from '../../lib/store';
+import { apiClient } from '../../lib/api';
 import { PageHeader } from '../layout/PageHeader';
 import { StatusBadge } from '../ui/StatusBadge';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -49,11 +50,29 @@ export function WorkerTripStatus({ tripId }: WorkerTripStatusProps) {
       minute: '2-digit',
     })
   );
-  const [unloadQuantity, setUnloadQuantity] = useState<number>(trip?.quantity || 18);
+  const [unloadQuantity, setUnloadQuantity] = useState<number | string>(trip?.quantity ?? 18);
   const [unloadUnit, setUnloadUnit] = useState<'Ton' | 'CFT' | 'Load'>(trip?.unit || 'Ton');
   const [deliveryProof, setDeliveryProof] = useState(`POD-${Date.now().toString().slice(-6)}`);
   const [statusNote, setStatusNote] = useState('');
   const [closingKm, setClosingKm] = useState<number>((trip?.openingKm || 48200) + 35);
+
+  useEffect(() => {
+    if (trip) {
+      if (trip.unloadQuantity !== undefined && trip.unloadQuantity !== null) {
+        setUnloadQuantity(trip.unloadQuantity);
+      } else if (trip.quantity !== undefined && trip.quantity !== null) {
+        setUnloadQuantity(trip.quantity);
+      }
+      if (trip.unloadUnit) {
+        setUnloadUnit(trip.unloadUnit as any);
+      } else if (trip.unit) {
+        setUnloadUnit(trip.unit as any);
+      }
+      if (trip.closingKm) {
+        setClosingKm(trip.closingKm);
+      }
+    }
+  }, [trip?.id, trip?.quantity, trip?.unloadQuantity, trip?.unit, trip?.unloadUnit, trip?.closingKm]);
 
   if (!trip) {
     return (
@@ -92,7 +111,7 @@ export function WorkerTripStatus({ tripId }: WorkerTripStatusProps) {
           This trip is currently in <strong>{trip.status}</strong> state. Operational transitions are complete.
         </p>
         <Link href={`/worker/trips/${trip.id}`} className="btn-primary mt-6">
-          View Trip Manifest
+          View Trip Details
         </Link>
       </div>
     );
@@ -107,7 +126,7 @@ export function WorkerTripStatus({ tripId }: WorkerTripStatusProps) {
       extra.departureDateTime = departureDateTime;
     } else if (next === 'DELIVERED') {
       extra.deliveryDateTime = deliveryDateTime;
-      extra.unloadQuantity = unloadQuantity;
+      extra.unloadQuantity = Number(unloadQuantity) || 0;
       extra.unloadUnit = unloadUnit;
       extra.deliveryProof = deliveryProof;
       extra.closingKm = closingKm;
@@ -229,15 +248,28 @@ export function WorkerTripStatus({ tripId }: WorkerTripStatusProps) {
                   <label className="block text-xs font-bold text-[#16425B] mb-1">Actual Unloaded Quantity</label>
                   <div className="flex gap-2">
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       value={unloadQuantity}
-                      onChange={(e) => setUnloadQuantity(Number(e.target.value))}
-                      className="tms-input flex-1"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '') {
+                          setUnloadQuantity('');
+                          return;
+                        }
+                        const sanitized = val.replace(/[^0-9.]/g, '');
+                        const parts = sanitized.split('.');
+                        const clean = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : sanitized;
+                        setUnloadQuantity(clean);
+                      }}
+                      placeholder="e.g. 25 or 25.75"
+                      className="tms-input flex-1 min-w-0 font-bold text-[#16425B]"
                     />
                     <select
                       value={unloadUnit}
                       onChange={(e) => setUnloadUnit(e.target.value as any)}
-                      className="tms-input w-24"
+                      className="tms-input !w-28 shrink-0 font-medium"
+                      style={{ width: '110px', minWidth: '100px' }}
                     >
                       <option value="Ton">Ton</option>
                       <option value="CFT">CFT</option>

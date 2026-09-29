@@ -15,7 +15,7 @@ export default function ManagerRatesPage() {
           key: 'rateType',
           label: 'Rate Classification',
           type: 'select',
-          options: ['CUSTOMER', 'CRUSHER', 'TRANSPORT'],
+          options: ['CUSTOMER', 'CRUSHER', 'TRANSPORT', 'PER_KM'],
         },
         { key: 'material', label: 'Material' },
         { key: 'loadingLocation', label: 'Loading Location' },
@@ -25,7 +25,7 @@ export default function ManagerRatesPage() {
           key: 'unit',
           label: 'Unit',
           type: 'select',
-          options: ['Ton', 'CFT', 'Load'],
+          options: ['Ton', 'CFT', 'Load', 'KM'],
         },
         { key: 'effectiveFrom', label: 'Effective From (YYYY-MM-DD)' },
       ]}

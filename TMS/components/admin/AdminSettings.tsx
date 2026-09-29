@@ -10,8 +10,8 @@ export function AdminSettings() {
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   const [companySettings, setCompanySettings] = useState({
-    companyName: 'TransFlow Logistics Private Limited',
-    gstin: '24AAACT1234F1Z8',
+    companyName: 'SRI AMMAN ARUL TRANSPORTS',
+    gstin: '33AABCT1332L1Z8',
     pan: 'AAACT1234F',
     email: 'billing@transflow.logistics',
     phone: '+91 98765 43210',

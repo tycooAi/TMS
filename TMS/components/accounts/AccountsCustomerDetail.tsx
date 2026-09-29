@@ -12,6 +12,7 @@ import { formatCurrency } from '../../lib/calculations';
 import { DollarSign, FileText, Plus } from '../ui/Icons';
 import { Payment } from '../../types';
 import { generateNextId } from '../../lib/ids';
+import { downloadCSV } from '../../lib/csvExport';
 
 interface AccountsCustomerDetailProps {
   customerId: string;
@@ -55,6 +56,38 @@ export function AccountsCustomerDetail({ customerId }: AccountsCustomerDetailPro
     (tx) => tx.entityId === customer.id || tx.entity.toLowerCase().includes(customer.name.toLowerCase())
   );
 
+  const handleExportLedgerCSV = () => {
+    const headers = [
+      'Transaction ID',
+      'Date',
+      'Party / Entity',
+      'Transaction Type',
+      'Debit (₹)',
+      'Credit (₹)',
+      'Amount (₹)',
+      'Payment Mode',
+      'Account',
+      'Reference',
+      'Status',
+      'Notes',
+    ];
+    const rows = customerHistory.map((t) => [
+      t.id,
+      t.date,
+      t.entity,
+      t.type,
+      t.debit,
+      t.credit,
+      t.amount,
+      t.paymentMode || '',
+      t.account || '',
+      t.reference || '',
+      t.status,
+      t.notes || '',
+    ]);
+    downloadCSV(`sri_amman_arul_${customer.id}_ledger.csv`, headers, rows);
+  };
+
   const handleOpenPayment = () => {
     setPaymentAmount(customer.balance > 0 ? customer.balance : 10000);
     setPaymentReference(`REF-${Date.now().toString().slice(-6)}`);
@@ -65,6 +98,11 @@ export function AccountsCustomerDetail({ customerId }: AccountsCustomerDetailPro
   const handleSavePayment = () => {
     if (paymentAmount <= 0) {
       setError('Payment amount must be greater than zero.');
+      return;
+    }
+
+    if (paymentMode !== 'CASH' && !paymentReference.trim()) {
+      setError(`Transaction Reference is required for ${paymentMode} payment mode.`);
       return;
     }
 
@@ -95,7 +133,7 @@ export function AccountsCustomerDetail({ customerId }: AccountsCustomerDetailPro
       mode: paymentMode,
       accountId: accounts.find((a) => a.name === targetAccount)?.id || 'acc_default',
       accountName: targetAccount,
-      reference: paymentReference,
+      reference: paymentReference.trim() || (paymentMode === 'CASH' ? 'CASH-RECEIPT' : ''),
       allocations,
       notes: paymentNotes || 'Customer payment posted against ledger statement',
       recordedBy: 'Anitha S',
@@ -113,6 +151,14 @@ export function AccountsCustomerDetail({ customerId }: AccountsCustomerDetailPro
         description={`Customer Account Ledger: ${customer.id} · Phone: ${customer.phone}`}
         badge={<StatusBadge status={customer.status} />}
       >
+        <button
+          onClick={handleExportLedgerCSV}
+          className="btn-secondary flex items-center gap-1.5"
+          title="Export customer transaction history ledger to CSV"
+        >
+          <FileText size={15} />
+          Export Ledger CSV
+        </button>
         <button onClick={handleOpenPayment} className="btn-primary">
           <DollarSign size={16} />
           Record Payment
@@ -317,13 +363,17 @@ export function AccountsCustomerDetail({ customerId }: AccountsCustomerDetailPro
               <label className="block text-xs font-bold text-[#16425B] mb-1">Payment Mode</label>
               <select
                 value={paymentMode}
-                onChange={(e) => setPaymentMode(e.target.value as any)}
+                onChange={(e) => {
+                  const mode = e.target.value as any;
+                  setPaymentMode(mode);
+                  setError('');
+                }}
                 className="tms-input"
               >
                 <option value="UPI">UPI / QR Payment</option>
                 <option value="BANK">Bank Transfer / NEFT</option>
                 <option value="CASH">Cash in Hand</option>
-                <option value="ONLINE">Cheque Deposit</option>
+                <option value="ONLINE">Online / Cheque Deposit</option>
                 <option value="OTHER">Other Adjustment</option>
               </select>
             </div>
@@ -344,16 +394,34 @@ export function AccountsCustomerDetail({ customerId }: AccountsCustomerDetailPro
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#16425B] mb-1">
-                Bank / UPI Transaction Reference
-              </label>
-              <input
-                type="text"
-                value={paymentReference}
-                onChange={(e) => setPaymentReference(e.target.value)}
-                placeholder="e.g. UPI/260913/49102"
-                className="tms-input"
-              />
+              {paymentMode === 'CASH' ? (
+                <div>
+                  <label className="block text-xs font-bold text-[#16425B] mb-1">
+                    Transaction Reference <span className="text-[#8898aa] font-normal">(Optional for Cash)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={paymentReference}
+                    onChange={(e) => setPaymentReference(e.target.value)}
+                    placeholder="Optional receipt / voucher reference..."
+                    className="tms-input"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-bold text-[#16425B] mb-1">
+                    Bank / UPI Transaction Reference <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={paymentReference}
+                    onChange={(e) => setPaymentReference(e.target.value)}
+                    placeholder="e.g. UPI/260913/49102 / UTR-99120"
+                    required
+                    className="tms-input font-medium"
+                  />
+                </div>
+              )}
             </div>
 
             <div>

@@ -40,7 +40,7 @@ public class DriverController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_ACCOUNTS', 'DRIVER_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_ACCOUNTS', 'ROLE_WORKER', 'DRIVER_MANAGE')")
     @Operation(summary = "Register a new driver")
     public ResponseEntity<ApiResponse<Driver>> createDriver(@Valid @RequestBody Driver driver) {
         return ResponseEntity.ok(ApiResponse.ok("Driver created successfully", driverService.createDriver(driver)));

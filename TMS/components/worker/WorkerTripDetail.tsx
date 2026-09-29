@@ -35,15 +35,20 @@ export function WorkerTripDetail({ tripId }: WorkerTripDetailProps) {
   return (
     <div>
       <PageHeader
-        title={`Trip Manifest ${trip.id}`}
-        description={`Operational Dispatch Record · Business Date: ${trip.date}`}
+        title={`Trip Details ${trip.id}`}
+        description={`Business Date: ${trip.date}`}
         badge={<StatusBadge status={trip.status} />}
       >
         {trip.status !== 'DELIVERED' && trip.status !== 'COMPLETED' && trip.status !== 'NO_LOAD' && (
-          <Link href={`/worker/trips/${trip.id}/status`} className="btn-primary">
-            Update Operational Status
-            <ArrowRight size={15} />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href={`/worker/trips/new?editId=${trip.id}`} className="btn-secondary">
+              Edit Trip
+            </Link>
+            <Link href={`/worker/trips/${trip.id}/status`} className="btn-primary">
+              Update Operational Status
+              <ArrowRight size={15} />
+            </Link>
+          </div>
         )}
       </PageHeader>
 
@@ -110,6 +115,12 @@ export function WorkerTripDetail({ tripId }: WorkerTripDetailProps) {
             <span className="text-[#5A6E7F]">Contact Phone:</span>
             <span>{trip.customerPhone}</span>
           </div>
+          {trip.customerTransactionType && (
+            <div className="flex justify-between text-xs">
+              <span className="text-[#5A6E7F]">Transaction Type:</span>
+              <span className="font-semibold text-[#2F668F]">{trip.customerTransactionType}</span>
+            </div>
+          )}
         </div>
 
         <div className="bg-white p-5 rounded-lg border border-[#D9DBD6] space-y-2">
@@ -140,7 +151,7 @@ export function WorkerTripDetail({ tripId }: WorkerTripDetailProps) {
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-[#5A6E7F]">Loaded Quantity:</span>
-            <span>{trip.isNoLoad ? '0' : `${trip.quantity} ${trip.unit}`}</span>
+            <span className="font-bold text-[#16425B]">{trip.isNoLoad ? '0' : `${trip.quantity} ${trip.unit}`}</span>
           </div>
           {trip.unloadQuantity !== undefined && (
             <div className="flex justify-between text-xs">
@@ -150,6 +161,24 @@ export function WorkerTripDetail({ tripId }: WorkerTripDetailProps) {
               </span>
             </div>
           )}
+          <div className="pt-2 mt-2 border-t border-[#D9DBD6] space-y-1">
+            <div className="flex justify-between text-xs">
+              <span className="text-[#5A6E7F]">Billing Rate:</span>
+              <strong className="text-[#16425B]">₹{trip.billingRate ?? trip.appliedRate ?? 0} / {trip.unit}</strong>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-[#5A6E7F]">Transport Rate:</span>
+              <strong className="text-[#16425B]">₹{trip.transportRate ?? 0} / {trip.unit}</strong>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-[#5A6E7F]">Purchase Rate:</span>
+              <span className="text-[#5A6E7F]">₹{trip.purchaseRate ?? 0} / {trip.unit}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-[#5A6E7F]">Per-KM Rate:</span>
+              <span className="text-[#2F668F] font-semibold">₹{trip.perKmRate ?? 28} / KM</span>
+            </div>
+          </div>
         </div>
 
         <div className="bg-white p-5 rounded-lg border border-[#D9DBD6] space-y-2 sm:col-span-2 lg:col-span-3">

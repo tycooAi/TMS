@@ -6,17 +6,50 @@ import { useTmsStore } from '../../lib/store';
 import { PageHeader } from '../layout/PageHeader';
 import { KpiCard } from '../ui/KpiCard';
 import { StatusBadge } from '../ui/StatusBadge';
-import { ArrowRight, Factory, Truck, Users, Plus, ClipboardList } from '../ui/Icons';
+import { ArrowRight, Factory, Truck, Users, Plus, ClipboardList, DollarSign, Building2, FileText, Fuel, Shield } from '../ui/Icons';
 import { formatCurrency } from '../../lib/calculations';
 
 export function ManagerDashboard() {
-  const { trips, vehicles, drivers, workers, sources, rates } = useTmsStore();
+  const {
+    trips,
+    vehicles,
+    drivers,
+    workers,
+    sources,
+    rates,
+    customers,
+    transactions,
+    dieselRecords,
+    vehicleExpenses,
+    otherExpenses,
+    invoices,
+  } = useTmsStore();
 
+  // Financial KPI calculations — unified cross-portal with MD Dashboard & MD Finance
+  const totalRevenue = customers.reduce((sum, c) => sum + (c.totalCredit || 0), 0);
+  const totalCollections = transactions
+    .filter((t) => t.type === 'CUSTOMER_PAYMENT')
+    .reduce((sum, t) => sum + (t.amount || 0), 0);
+  const totalReceivables = customers.reduce((sum, c) => sum + (c.balance || 0), 0);
+
+  const pendingInvoices = invoices.filter((i) => i.status !== 'PAID');
+  const pendingInvoiceAmount = pendingInvoices.reduce((sum, i) => sum + (i.outstandingAmount || 0), 0);
+
+  const totalDiesel = dieselRecords.reduce((sum, d) => sum + (d.totalAmount || 0), 0);
+  const totalMaintenance = vehicleExpenses.reduce((sum, v) => sum + (v.amount || 0), 0);
+  const totalWages = workers.reduce((sum, w) => sum + (w.paid || 0), 0);
+  const totalOther = otherExpenses.reduce((sum, o) => sum + (o.amount || 0), 0);
+  const totalExpenses = totalDiesel + totalMaintenance + totalWages + totalOther;
+
+  const netContribution = totalRevenue - totalExpenses;
+
+  // Operational metrics
   const activeTrips = trips.filter((t) => t.status === 'RUNNING' || t.status === 'LOADED').length;
   const deliveredTrips = trips.filter((t) => t.status === 'DELIVERED' || t.status === 'COMPLETED').length;
   const availableVehicles = vehicles.filter((v) => v.status === 'AVAILABLE').length;
   const activeWorkers = workers.filter((w) => w.status === 'ACTIVE').length;
   const activeSources = sources.filter((s) => s.status === 'ACTIVE').length;
+  const vehicleUtilization = vehicles.length > 0 ? Math.round((trips.filter((t) => t.status === 'RUNNING').length / vehicles.length) * 100) : 0;
 
   return (
     <div>
@@ -24,20 +57,97 @@ export function ManagerDashboard() {
         title="Operations Command Center"
         description="Live operational oversight, fleet readiness, crusher sources, and commercial rate control"
       >
-        <Link href="/manager/rates" className="btn-secondary">
+        <Link href="/manager/rates" className="btn-primary">
           <ClipboardList size={15} />
           Configure Commercial Rates
         </Link>
-        <Link href="/worker/trips/new" className="btn-primary">
-          <Plus size={15} />
-          Dispatch New Trip
-        </Link>
       </PageHeader>
 
+      {/* FINANCIAL KPIS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-4">
+        {/* 1. Revenue */}
+        <div className="p-4 bg-white rounded-lg border border-[#D9DBD6] shadow-sm hover:border-[#2F668F] transition-all">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-bold text-[#5A6E7F] uppercase tracking-wider">
+              Total Revenue
+            </span>
+            <DollarSign size={16} className="text-[#2F668F]" />
+          </div>
+          <strong className="text-xl font-bold text-[#16425B] block my-0.5">
+            {formatCurrency(totalRevenue)}
+          </strong>
+        </div>
+
+        {/* 2. Income / Collections */}
+        <div className="p-4 bg-white rounded-lg border border-[#D9DBD6] shadow-sm hover:border-[#2F668F] transition-all">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-bold text-[#5A6E7F] uppercase tracking-wider">
+              Realized Income
+            </span>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+          </div>
+          <strong className="text-xl font-bold text-emerald-700 block my-0.5">
+            {formatCurrency(totalCollections)}
+          </strong>
+        </div>
+
+        {/* 3. Receivables */}
+        <div className="p-4 bg-white rounded-lg border border-[#D9DBD6] shadow-sm hover:border-[#2F668F] transition-all">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-bold text-[#5A6E7F] uppercase tracking-wider">
+              Receivables
+            </span>
+            <Building2 size={16} className="text-[#b45309]" />
+          </div>
+          <strong className="text-xl font-bold text-[#b45309] block my-0.5">
+            {formatCurrency(totalReceivables)}
+          </strong>
+        </div>
+
+        {/* 4. Pending Payments / Unpaid Invoices */}
+        <div className="p-4 bg-white rounded-lg border border-[#D9DBD6] shadow-sm hover:border-[#2F668F] transition-all">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-bold text-[#5A6E7F] uppercase tracking-wider">
+              Pending Payments
+            </span>
+            <FileText size={16} className="text-[#3B7CA6]" />
+          </div>
+          <strong className="text-xl font-bold text-[#16425B] block my-0.5">
+            {formatCurrency(pendingInvoiceAmount)}
+          </strong>
+        </div>
+
+        {/* 5. Total Expenses */}
+        <div className="p-4 bg-white rounded-lg border border-[#D9DBD6] shadow-sm hover:border-[#2F668F] transition-all">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-bold text-[#5A6E7F] uppercase tracking-wider">
+              Total Expenses
+            </span>
+            <Fuel size={16} className="text-rose-600" />
+          </div>
+          <strong className="text-xl font-bold text-rose-700 block my-0.5">
+            {formatCurrency(totalExpenses)}
+          </strong>
+        </div>
+
+        {/* 6. Net Contribution */}
+        <div className="p-4 bg-white rounded-lg border border-[#D9DBD6] shadow-sm hover:border-[#2F668F] transition-all">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-bold text-[#5A6E7F] uppercase tracking-wider">
+              Net Contribution
+            </span>
+            <Shield size={16} className={netContribution >= 0 ? 'text-emerald-700' : 'text-rose-700'} />
+          </div>
+          <strong className={`text-xl font-bold block my-0.5 ${netContribution >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+            {formatCurrency(netContribution)}
+          </strong>
+        </div>
+      </div>
+
       {/* OPERATIONS KPIS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
         <KpiCard
-          label="Active Running Trips"
+          label="Running / Active Trips"
           value={activeTrips}
           note="In-transit on route"
         />
@@ -49,7 +159,7 @@ export function ManagerDashboard() {
         <KpiCard
           label="Available Fleet"
           value={`${availableVehicles} / ${vehicles.length}`}
-          note="Ready for dispatch"
+          note={`${vehicleUtilization}% Fleet Active`}
         />
         <KpiCard
           label="Active Workforce"

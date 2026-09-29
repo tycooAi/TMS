@@ -30,6 +30,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final SystemControlFilter systemControlFilter;
 
     @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:3001}")
     private List<String> allowedOrigins;
@@ -56,6 +57,7 @@ public class SecurityConfig {
                                 "/error",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/roles",
+                                "/api/v1/system/status",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
@@ -63,7 +65,8 @@ public class SecurityConfig {
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(systemControlFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

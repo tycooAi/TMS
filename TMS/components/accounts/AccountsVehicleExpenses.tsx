@@ -7,12 +7,17 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { StatusBadge } from '../ui/StatusBadge';
 import { formatCurrency } from '../../lib/calculations';
-import { Plus, Wrench, Truck } from '../ui/Icons';
+import { Plus, Wrench, Truck, Search, FileText } from '../ui/Icons';
 import { VehicleExpense } from '../../types';
 import { generateNextId } from '../../lib/ids';
+import { downloadCSV } from '../../lib/csvExport';
 
 export function AccountsVehicleExpenses() {
   const { vehicles, vehicleExpenses, accounts, recordVehicleExpense } = useTmsStore();
+
+  const [query, setQuery] = useState('');
+  const [filterVehicle, setFilterVehicle] = useState('ALL');
+  const [filterExpenseType, setFilterExpenseType] = useState('ALL');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -27,6 +32,52 @@ export function AccountsVehicleExpenses() {
   const [billNumber, setBillNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
+
+  const filteredVehicleExpenses = vehicleExpenses.filter((exp) => {
+    const q = query.trim().toLowerCase();
+    const matchesQ =
+      !q ||
+      exp.id.toLowerCase().includes(q) ||
+      exp.vehicleRegistration.toLowerCase().includes(q) ||
+      exp.expenseType.toLowerCase().includes(q) ||
+      (exp.serviceStationSupplier && exp.serviceStationSupplier.toLowerCase().includes(q)) ||
+      (exp.billNumber && exp.billNumber.toLowerCase().includes(q));
+
+    const matchesVehicle = filterVehicle === 'ALL' || exp.vehicleRegistration === filterVehicle;
+    const matchesType = filterExpenseType === 'ALL' || exp.expenseType === filterExpenseType;
+
+    return matchesQ && matchesVehicle && matchesType;
+  });
+
+  const handleExportCSV = () => {
+    const headers = [
+      'Expense ID',
+      'Date',
+      'Time',
+      'Vehicle Registration',
+      'Expense Type',
+      'Amount (₹)',
+      'Supplier / Workshop',
+      'Bill / Reference',
+      'Payment Account',
+      'Status',
+      'Notes',
+    ];
+    const rows = filteredVehicleExpenses.map((exp) => [
+      exp.id,
+      exp.date,
+      exp.time,
+      exp.vehicleRegistration,
+      exp.expenseType,
+      exp.amount,
+      exp.serviceStationSupplier || '',
+      exp.billNumber || '',
+      exp.account,
+      exp.status,
+      exp.notes || '',
+    ]);
+    downloadCSV('sri_amman_arul_vehicle_expenses_filtered.csv', headers, rows);
+  };
 
   const selectedVehicle = vehicles.find((v) => v.registration === selectedReg) || vehicles[0];
 
@@ -116,7 +167,64 @@ export function AccountsVehicleExpenses() {
 
       {/* VEHICLE EXPENSES TABLE */}
       <div className="bg-white rounded-lg border border-[#D9DBD6] p-5">
-        <h2 className="text-sm font-bold text-[#16425B] mb-3">Vehicle Expense Records</h2>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
+          <div>
+            <h2 className="text-sm font-bold text-[#16425B]">Vehicle Expense Records</h2>
+            <p className="text-xs text-[#5A6E7F]">Attributable maintenance, repair and compliance vouchers</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+            <div className="relative w-full md:w-56">
+              <Search className="absolute left-3 top-2.5 text-[#5A6E7F]" size={15} />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search expense, bill..."
+                className="tms-input pl-8 py-1.5 text-xs"
+              />
+            </div>
+
+            <select
+              value={filterVehicle}
+              onChange={(e) => setFilterVehicle(e.target.value)}
+              className="tms-input py-1.5 text-xs w-36"
+            >
+              <option value="ALL">All Vehicles</option>
+              {vehicles.map((v) => (
+                <option key={v.registration} value={v.registration}>
+                  {v.registration}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={filterExpenseType}
+              onChange={(e) => setFilterExpenseType(e.target.value)}
+              className="tms-input py-1.5 text-xs w-36"
+            >
+              <option value="ALL">All Types</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Repair">Repair</option>
+              <option value="Service">Service</option>
+              <option value="Tyre">Tyre</option>
+              <option value="Spare Parts">Spare Parts</option>
+              <option value="FC / Permit">FC / Permit</option>
+              <option value="Insurance">Insurance</option>
+              <option value="Other">Other</option>
+            </select>
+
+            <button
+              onClick={handleExportCSV}
+              className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5"
+              title="Export filtered vehicle expenses to CSV"
+            >
+              <FileText size={14} />
+              Export CSV
+            </button>
+          </div>
+        </div>
+
         <div className="table-container">
           <table className="tms-table">
             <thead>
@@ -133,7 +241,7 @@ export function AccountsVehicleExpenses() {
               </tr>
             </thead>
             <tbody>
-              {vehicleExpenses.map((exp) => (
+              {filteredVehicleExpenses.map((exp) => (
                 <tr key={exp.id}>
                   <td className="font-bold text-[#2F668F]">{exp.id}</td>
                   <td>{exp.date} {exp.time}</td>

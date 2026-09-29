@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   AuthSession,
+  SystemControlState,
   UserRole,
 } from '../../types';
 import {
@@ -15,7 +16,10 @@ import {
   isRolePermitted,
   setSession,
 } from '../../lib/auth';
+import { apiClient } from '../../lib/api';
+import { readStore } from '../../lib/store';
 import {
+  Activity,
   AlertTriangle,
   Building2,
   ChevronRight,
@@ -29,10 +33,14 @@ import {
   Lock,
   LogOut,
   MapPin,
+  Network,
   Plus,
   RefreshCw,
+  Search,
+  Server,
   Settings,
   Shield,
+  Terminal,
   Truck,
   Upload,
   UserRound,
@@ -46,6 +54,11 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   badge?: string | number;
+}
+
+interface NavGroup {
+  groupTitle: string;
+  items: NavItem[];
 }
 
 interface AppShellProps {
@@ -64,11 +77,47 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
+  // Global System State Monitoring
+  const [systemControl, setSystemControl] = useState<SystemControlState | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+
+  const checkGlobalSystemStatus = async () => {
+    setCheckingStatus(true);
+    try {
+      const res = await apiClient.system.getStatus();
+      if (res && res.data) {
+        setSystemControl(res.data);
+      }
+    } catch {
+      const s = readStore();
+      if (s && s.systemControl) {
+        setSystemControl(s.systemControl);
+      }
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    checkGlobalSystemStatus();
+    const handleStoreUpdate = () => {
+      const s = readStore();
+      if (s && s.systemControl) {
+        setSystemControl(s.systemControl);
+      }
+    };
+    window.addEventListener('tms:store-update', handleStoreUpdate);
+    const interval = setInterval(checkGlobalSystemStatus, 30000);
+    return () => {
+      window.removeEventListener('tms:store-update', handleStoreUpdate);
+      clearInterval(interval);
+    };
+  }, []);
+
   // Sync session
   useEffect(() => {
     const s = getCurrentSession();
     if (!s) {
-      // Default to demo user for this portal if unauthenticated in prototype
       const defaultUser =
         DEMO_USERS.find((u) => u.role.toLowerCase() === portal) || DEMO_USERS[0];
       setSession(defaultUser);
@@ -93,12 +142,71 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
     return () => document.removeEventListener('mousedown', close);
   }, []);
 
-  // Define nav items per portal
-  const portalNavs: Record<'worker' | 'accounts' | 'manager' | 'md' | 'admin', NavItem[]> = {
+  // Developer & System Control Groups for Admin Portal
+  const adminNavGroups: NavGroup[] = [
+    {
+      groupTitle: 'SYSTEM',
+      items: [
+        { label: 'System Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+        { label: 'System Health', href: '/admin/system-health', icon: Activity },
+        { label: 'Database Explorer', href: '/admin/database', icon: Database },
+        { label: 'Entities & ER Map', href: '/admin/entities', icon: Network },
+        { label: 'Calculations & Rules', href: '/admin/calculations', icon: Terminal },
+      ],
+    },
+    {
+      groupTitle: 'APPLICATION',
+      items: [
+        { label: 'Users & Accounts', href: '/admin/users', icon: Users },
+        { label: 'Roles & Permissions', href: '/admin/roles', icon: Shield },
+        { label: 'System Configuration', href: '/admin/settings', icon: Settings },
+        { label: 'API & Backend Services', href: '/admin/api', icon: Server },
+        { label: 'System Logs', href: '/admin/logs', icon: Terminal },
+      ],
+    },
+    {
+      groupTitle: 'DATA',
+      items: [
+        { label: 'Data Explorer', href: '/admin/data-explorer', icon: ClipboardList },
+        { label: 'Data Integrity Scan', href: '/admin/integrity', icon: Activity },
+        { label: 'Global Search', href: '/admin/search', icon: Search },
+      ],
+    },
+    {
+      groupTitle: 'AUDIT',
+      items: [
+        { label: 'Audit Trails', href: '/admin/audit', icon: ClipboardList },
+        { label: 'Activity Logs', href: '/admin/activity', icon: Activity },
+      ],
+    },
+    {
+      groupTitle: 'DEVELOPER',
+      items: [
+        { label: 'Database Schema', href: '/admin/schema', icon: Database },
+        { label: 'Diagnostics Suite', href: '/admin/diagnostics', icon: Wrench },
+        { label: 'System Information', href: '/admin/info', icon: Server },
+        { label: 'Excel Import Center', href: '/admin/imports', icon: Upload },
+      ],
+    },
+    {
+      groupTitle: 'SYSTEM CONTROL',
+      items: [
+        { label: 'System State Control', href: '/admin/system-control', icon: Server },
+        { label: 'Emergency Deck', href: '/admin/emergency', icon: AlertTriangle },
+        { label: 'Backups Center', href: '/admin/backups', icon: Database },
+        { label: 'Recovery Center', href: '/admin/recovery', icon: Wrench },
+      ],
+    },
+  ];
+
+  // Standard Nav items for other portals
+  const portalNavs: Record<'worker' | 'accounts' | 'manager' | 'md', NavItem[]> = {
     worker: [
       { label: 'Dashboard', href: '/worker/dashboard', icon: LayoutDashboard },
       { label: 'New Trip', href: '/worker/trips/new', icon: Plus },
       { label: 'My Trips', href: '/worker/trips', icon: ClipboardList },
+      { label: 'Add Vehicles', href: '/worker/vehicles', icon: Truck },
+      { label: 'Add Drivers', href: '/worker/drivers', icon: UserRound },
     ],
     accounts: [
       { label: 'Dashboard', href: '/accounts/dashboard', icon: LayoutDashboard },
@@ -115,6 +223,7 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
     manager: [
       { label: 'Dashboard', href: '/manager/dashboard', icon: LayoutDashboard },
       { label: 'Workers', href: '/manager/workers', icon: Users },
+      { label: 'Customer Requests', href: '/manager/customer-requests', icon: Shield },
       { label: 'Customers', href: '/manager/customers', icon: Building2 },
       { label: 'Vehicles', href: '/manager/vehicles', icon: Truck },
       { label: 'Drivers', href: '/manager/drivers', icon: UserRound },
@@ -122,6 +231,7 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
       { label: 'Crushers / Sources', href: '/manager/crushers', icon: Factory },
       { label: 'Locations', href: '/manager/locations', icon: MapPin },
       { label: 'Rates Configuration', href: '/manager/rates', icon: ClipboardList },
+      { label: 'Audit Trails', href: '/manager/audit', icon: ClipboardList },
     ],
     md: [
       { label: 'Executive Cockpit', href: '/md/dashboard', icon: LayoutDashboard },
@@ -132,19 +242,9 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
       { label: 'Finance Overview', href: '/md/finance', icon: DollarSign },
       { label: 'Approvals Center', href: '/md/approvals', icon: Shield },
       { label: 'Executive Reports', href: '/md/reports', icon: FileText },
-    ],
-    admin: [
-      { label: 'Admin Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-      { label: 'User Management', href: '/admin/users', icon: Users },
-      { label: 'Roles & Permissions', href: '/admin/roles', icon: Shield },
-      { label: 'Master Center', href: '/admin/masters', icon: Database },
-      { label: 'Audit Trail', href: '/admin/audit', icon: ClipboardList },
-      { label: 'Excel Import', href: '/admin/imports', icon: Upload },
-      { label: 'System Settings', href: '/admin/settings', icon: Settings },
+      { label: 'Audit Trails', href: '/md/audit', icon: ClipboardList },
     ],
   };
-
-  const navItems = portalNavs[portal] || portalNavs.admin || [];
 
   const handleRoleSwitch = (newRole: UserRole) => {
     const user = DEMO_USERS.find((u) => u.role === newRole);
@@ -196,8 +296,109 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
     );
   }
 
-  // Active breadcrumb label
-  const activeNav = navItems.find(
+  // GLOBAL SYSTEM SHUTDOWN / MAINTENANCE SCREEN FOR NON-ADMINS
+  const isSystemRestricted =
+    systemControl &&
+    (systemControl.systemState === 'MAINTENANCE' || systemControl.systemState === 'SHUTDOWN');
+
+  const isAdminUser = session?.role === 'ADMIN';
+
+  if (isSystemRestricted && !isAdminUser) {
+    return (
+      <div className="min-h-screen bg-[#0d1e2e] text-white flex items-center justify-center p-6 font-sans">
+        <div className="max-w-xl w-full bg-[#112638] rounded-2xl border border-[#21435f] shadow-2xl p-8 text-center space-y-6">
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#2F668F] border border-[#81C4D7] text-white flex items-center justify-center shadow">
+              <Truck size={22} />
+            </div>
+            <div className="text-left">
+              <strong className="text-sm font-black tracking-wider text-white uppercase block">
+                SRI AMMAN ARUL TRANSPORTS
+              </strong>
+              <span className="text-[10px] text-[#81C4D7] tracking-widest font-semibold uppercase">
+                TransFlow TMS Enterprise SaaS
+              </span>
+            </div>
+          </div>
+
+          <div
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
+              systemControl.systemState === 'SHUTDOWN'
+                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+            }`}
+          >
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                systemControl.systemState === 'SHUTDOWN' ? 'bg-rose-500 animate-ping' : 'bg-amber-500'
+              }`}
+            />
+            <span>
+              {systemControl.systemState === 'SHUTDOWN' ? 'System Temporarily Unavailable' : 'Scheduled Maintenance Mode'}
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black text-white tracking-tight">
+              {systemControl.maintenanceTitle || 'System Temporarily Unavailable'}
+            </h1>
+            <p className="text-xs text-[#a1b8cc] leading-relaxed max-w-md mx-auto">
+              {systemControl.systemState === 'SHUTDOWN'
+                ? systemControl.shutdownReason ||
+                  'The entire SaaS platform is temporarily unavailable due to emergency maintenance. Please try again later.'
+                : systemControl.maintenanceMessage ||
+                  'The system is currently undergoing scheduled maintenance. Please check back shortly.'}
+            </p>
+          </div>
+
+          {systemControl.expectedRecoveryTime && (
+            <div className="p-3 rounded-lg bg-[#16354f] border border-[#234e73] inline-block text-xs font-semibold text-[#81C4D7]">
+              <span>Expected Service Recovery: </span>
+              <strong className="text-white">
+                {new Date(systemControl.expectedRecoveryTime).toLocaleString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </strong>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              onClick={checkGlobalSystemStatus}
+              disabled={checkingStatus}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-xs font-extrabold text-[#112638] bg-[#81C4D7] hover:bg-[#9bd4e3] transition-all flex items-center justify-center gap-2 shadow"
+            >
+              <RefreshCw size={14} className={checkingStatus ? 'animate-spin' : ''} />
+              <span>Check System Status</span>
+            </button>
+            <button
+              onClick={() => handleRoleSwitch('ADMIN')}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-xs font-bold text-white bg-[#1e4463] hover:bg-[#285982] border border-[#2d608a] transition-all flex items-center justify-center gap-2"
+            >
+              <Shield size={14} />
+              <span>Admin Recovery Login</span>
+            </button>
+          </div>
+
+          <p className="text-[10px] text-[#5A6E7F] pt-4 border-t border-[#1c3c57]">
+            TransFlow TMS Control Room · Sri Amman Arul Transports Operations Infrastructure
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Find active navigation item
+  const allNavItems =
+    portal === 'admin'
+      ? adminNavGroups.flatMap((g) => g.items)
+      : portalNavs[portal] || [];
+
+  const activeNav = allNavItems.find(
     (item) => item.href === pathname || (item.href !== `/${portal}/dashboard` && pathname.startsWith(item.href))
   );
 
@@ -205,60 +406,90 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
     <div className="flex min-h-screen bg-[#f4f7fa] font-sans antialiased text-[#16425B]">
       {/* SIDEBAR */}
       <aside
-        className={`w-64 bg-[#16425B] text-white flex flex-col flex-shrink-0 z-30 transition-all duration-200 border-r border-[#225470] ${
+        className={`w-64 bg-[#16425B] text-white flex flex-col flex-shrink-0 z-30 transition-all duration-200 border-r border-[#225470] print:hidden ${
           isMobileNavOpen ? 'fixed inset-y-0 left-0' : 'hidden md:flex'
         }`}
       >
         {/* Brand Header */}
-        <div className="h-16 bg-[#113550] border-b border-[#215473] flex items-center gap-3 px-5">
-          <div className="w-8 h-8 rounded-lg bg-[#2F668F] border border-[#81C4D7] text-white flex items-center justify-center shadow-sm">
+        <div className="h-16 bg-[#113550] border-b border-[#215473] flex items-center gap-3 px-4">
+          <div className="w-8 h-8 rounded-lg bg-[#2F668F] border border-[#81C4D7] text-white flex items-center justify-center shadow-sm shrink-0">
             <Truck size={18} />
           </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <strong className="text-sm font-black tracking-wider text-white">TMS</strong>
-              <span className="text-[10px] uppercase font-bold text-[#81C4D7] tracking-widest">
-                TRANSLOGIX
-              </span>
-            </div>
-            <p className="text-[10px] font-semibold text-[#81C4D7] tracking-wide uppercase">
-              {portalName}
-            </p>
+          <div className="min-w-0 flex-1">
+            <strong className="text-xs font-black tracking-wider text-white uppercase block leading-tight truncate">
+              SRI AMMAN ARUL TRANSPORTS
+            </strong>
           </div>
         </div>
 
         {/* Navigation Section */}
-        <div className="flex-1 py-4 px-3 overflow-y-auto">
-          <p className="px-3 mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[#81C4D7]/70">
-            Navigation Core
-          </p>
-          <nav className="space-y-1">
-            {navItems.map(({ label, href, icon: Icon }) => {
-              const isActive =
-                pathname === href || (href !== `/${portal}/dashboard` && pathname.startsWith(href));
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={() => setIsMobileNavOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-semibold transition-all ${
-                    isActive
-                      ? 'bg-[#2F668F] text-white shadow-sm'
-                      : 'text-[#c9d6e2] hover:bg-[#1f506e] hover:text-white'
-                  }`}
-                >
-                  <Icon size={16} className={isActive ? 'text-[#81C4D7]' : 'text-[#8da3b5]'} />
-                  <span>{label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+        <div className="flex-1 py-3 px-3 overflow-y-auto space-y-4">
+          {portal === 'admin' ? (
+            // Render 7 Categorized Sections for Admin
+            adminNavGroups.map((group) => (
+              <div key={group.groupTitle} className="space-y-1">
+                <p className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-[#81C4D7]/70">
+                  {group.groupTitle}
+                </p>
+                <nav className="space-y-0.5">
+                  {group.items.map(({ label, href, icon: Icon }) => {
+                    const isActive =
+                      pathname === href ||
+                      (href !== '/admin/dashboard' && pathname.startsWith(href));
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        onClick={() => setIsMobileNavOpen(false)}
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-semibold transition-all ${
+                          isActive
+                            ? 'bg-[#2F668F] text-white shadow-sm'
+                            : 'text-[#c9d6e2] hover:bg-[#1f506e] hover:text-white'
+                        }`}
+                      >
+                        <Icon size={15} className={isActive ? 'text-[#81C4D7]' : 'text-[#8da3b5]'} />
+                        <span className="truncate">{label}</span>
+                      </Link>
+                    );
+                  })}
+                </nav>
+              </div>
+            ))
+          ) : (
+            // Standard single-group nav for other portals
+            <div>
+              <p className="px-3 mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[#81C4D7]/70">
+                Navigation Core
+              </p>
+              <nav className="space-y-1">
+                {(portalNavs[portal] || []).map(({ label, href, icon: Icon }) => {
+                  const isActive =
+                    pathname === href || (href !== `/${portal}/dashboard` && pathname.startsWith(href));
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setIsMobileNavOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-semibold transition-all ${
+                        isActive
+                          ? 'bg-[#2F668F] text-white shadow-sm'
+                          : 'text-[#c9d6e2] hover:bg-[#1f506e] hover:text-white'
+                      }`}
+                    >
+                      <Icon size={16} className={isActive ? 'text-[#81C4D7]' : 'text-[#8da3b5]'} />
+                      <span>{label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          )}
         </div>
 
-        {/* Quick Portal Switcher (Prototype feature for rapid testing) */}
-        <div className="p-3 mx-3 mb-3 rounded-lg bg-[#113550]/80 border border-[#215473]">
-          <div className="flex items-center justify-between text-[10px] font-bold text-[#81C4D7] uppercase tracking-wider mb-2">
-            <span>Prototype Switcher</span>
+        {/* Quick Portal Switcher */}
+        <div className="p-3 mx-3 mb-2 rounded-lg bg-[#113550]/80 border border-[#215473]">
+          <div className="flex items-center justify-between text-[10px] font-bold text-[#81C4D7] uppercase tracking-wider mb-1.5">
+            <span>Control Persona</span>
             <span className="text-white bg-[#2F668F] px-1.5 py-0.5 rounded text-[9px]">Demo</span>
           </div>
           <select
@@ -302,8 +533,33 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
 
       {/* MAIN VIEWPORT */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* PERSISTENT ADMIN SYSTEM STATE WARNING BANNER */}
+        {isSystemRestricted && isAdminUser && (
+          <div
+            className={`px-6 py-2 text-xs font-bold flex items-center justify-between shadow-md print:hidden ${
+              systemControl?.systemState === 'SHUTDOWN'
+                ? 'bg-gradient-to-r from-rose-700 to-rose-900 text-white'
+                : 'bg-gradient-to-r from-amber-600 to-amber-700 text-white'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={16} className="text-amber-200 shrink-0" />
+              <span>
+                SYSTEM IS IN <strong>{systemControl?.systemState}</strong> MODE — Administrator Emergency Bypass Active
+              </span>
+            </div>
+            <Link
+              href="/admin/system-control"
+              className="underline text-amber-100 hover:text-white font-extrabold transition-colors flex items-center gap-1"
+            >
+              <span>Manage in System Control Center</span>
+              <span>&rarr;</span>
+            </Link>
+          </div>
+        )}
+
         {/* TOP STATUS BAR */}
-        <header className="h-16 bg-white border-b border-[#D9DBD6] px-6 flex items-center justify-between z-20">
+        <header className="h-16 bg-white border-b border-[#D9DBD6] px-6 flex items-center justify-between z-20 print:hidden">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}

@@ -7,12 +7,17 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { StatusBadge } from '../ui/StatusBadge';
 import { formatCurrency, calculateDieselMileage, calculateTripKM } from '../../lib/calculations';
-import { Plus, Fuel } from '../ui/Icons';
+import { Plus, Fuel, Search, FileText } from '../ui/Icons';
 import { DieselRecord } from '../../types';
 import { generateNextId } from '../../lib/ids';
+import { downloadCSV } from '../../lib/csvExport';
 
 export function AccountsDiesel() {
   const { dieselRecords, vehicles, drivers, accounts, recordDiesel } = useTmsStore();
+
+  const [query, setQuery] = useState('');
+  const [filterVehicle, setFilterVehicle] = useState('ALL');
+  const [filterDriver, setFilterDriver] = useState('ALL');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -23,21 +28,70 @@ export function AccountsDiesel() {
   const [fuelStation, setFuelStation] = useState('Indian Oil Highway Outlet, Madurai');
   const [litres, setLitres] = useState<number>(60);
   const [ratePerLitre, setRatePerLitre] = useState<number>(94.5);
-  const [startKm, setStartKm] = useState<number>(vehicles[0]?.currentKm ? vehicles[0].currentKm - 200 : 48000);
-  const [endKm, setEndKm] = useState<number>(vehicles[0]?.currentKm || 48200);
+
+  const filteredDieselRecords = dieselRecords.filter((d) => {
+    const q = query.trim().toLowerCase();
+    const matchesQ =
+      !q ||
+      d.id.toLowerCase().includes(q) ||
+      d.vehicleRegistration.toLowerCase().includes(q) ||
+      d.fuelStation.toLowerCase().includes(q) ||
+      d.driverName.toLowerCase().includes(q) ||
+      d.billNumber.toLowerCase().includes(q);
+
+    const matchesVehicle = filterVehicle === 'ALL' || d.vehicleRegistration === filterVehicle;
+    const matchesDriver = filterDriver === 'ALL' || d.driverId === filterDriver || d.driverName === filterDriver;
+
+    return matchesQ && matchesVehicle && matchesDriver;
+  });
+
+  const handleExportCSV = () => {
+    const headers = [
+      'Log ID',
+      'Date',
+      'Time',
+      'Vehicle Registration',
+      'Driver Name',
+      'Fuel Station',
+      'Litres',
+      'Rate per Litre (₹)',
+      'Total Amount (₹)',
+      'Distance (KM)',
+      'Mileage (KM/L)',
+      'Bill Number',
+      'Payment Account',
+      'Status',
+    ];
+    const rows = filteredDieselRecords.map((d) => [
+      d.id,
+      d.date,
+      d.time,
+      d.vehicleRegistration,
+      d.driverName,
+      d.fuelStation,
+      d.litres,
+      d.ratePerLitre,
+      d.totalAmount,
+      d.distanceKm,
+      d.mileage,
+      d.billNumber,
+      d.paymentAccount,
+      d.status,
+    ]);
+    downloadCSV('sri_amman_arul_diesel_filtered.csv', headers, rows);
+  };
+  const [kmTravelled, setKmTravelled] = useState<number>(200);
   const [billNumber, setBillNumber] = useState('');
   const [targetAccount, setTargetAccount] = useState(accounts[0]?.name || 'State Bank of India (Main A/C)');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
 
-  const distanceKm = calculateTripKM(startKm, endKm);
+  const distanceKm = Math.max(0, kmTravelled);
   const totalAmount = Math.round(litres * ratePerLitre);
-  const mileage = calculateDieselMileage(distanceKm, litres);
+  const mileage = litres > 0 ? Number((distanceKm / litres).toFixed(2)) : 0;
 
   const handleOpenLog = () => {
-    const v = vehicles.find((veh) => veh.registration === vehicleReg) || vehicles[0];
-    setEndKm(v.currentKm);
-    setStartKm(Math.max(0, v.currentKm - 200));
+    setKmTravelled(200);
     setBillNumber(`IOCL-${Date.now().toString().slice(-5)}`);
     setError('');
     setIsModalOpen(true);
@@ -52,8 +106,8 @@ export function AccountsDiesel() {
       setError('Litres and rate per litre must be greater than zero.');
       return;
     }
-    if (endKm <= startKm) {
-      setError('End KM must be greater than Start KM.');
+    if (kmTravelled < 0) {
+      setError('KM Travelled cannot be negative.');
       return;
     }
 
@@ -77,8 +131,6 @@ export function AccountsDiesel() {
         litres,
         ratePerLitre,
         totalAmount,
-        startKm,
-        endKm,
         distanceKm,
         mileage,
         paymentAccount: targetAccount,
@@ -147,6 +199,57 @@ export function AccountsDiesel() {
         </div>
       </div>
 
+      {/* FILTER & CSV CONTROLS */}
+      <div className="bg-white p-4 rounded-lg border border-[#D9DBD6] mb-6 flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full md:w-64">
+          <Search className="absolute left-3 top-2.5 text-[#5A6E7F]" size={15} />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search station, bill, driver..."
+            className="tms-input pl-8 py-1.5 text-xs"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          <select
+            value={filterVehicle}
+            onChange={(e) => setFilterVehicle(e.target.value)}
+            className="tms-input py-1.5 text-xs w-36"
+          >
+            <option value="ALL">All Vehicles</option>
+            {vehicles.map((v) => (
+              <option key={v.registration} value={v.registration}>
+                {v.registration}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterDriver}
+            onChange={(e) => setFilterDriver(e.target.value)}
+            className="tms-input py-1.5 text-xs w-36"
+          >
+            <option value="ALL">All Drivers</option>
+            {drivers.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={handleExportCSV}
+            className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5 shrink-0"
+            title="Export filtered diesel records to CSV"
+          >
+            <FileText size={14} />
+            Export CSV
+          </button>
+        </div>
+      </div>
+
       {/* DIESEL LOG TABLE */}
       <div className="table-container">
         <table className="tms-table">
@@ -167,7 +270,7 @@ export function AccountsDiesel() {
             </tr>
           </thead>
           <tbody>
-            {dieselRecords.map((d) => (
+            {filteredDieselRecords.map((d) => (
               <tr key={d.id}>
                 <td className="font-bold text-[#2F668F]">{d.id}</td>
                 <td>{d.date} {d.time}</td>
@@ -270,24 +373,20 @@ export function AccountsDiesel() {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-[#16425B] mb-1">Start Odometer KM *</label>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold text-[#16425B] mb-1">KM Travelled *</label>
               <input
                 type="number"
-                value={startKm || ''}
-                onChange={(e) => setStartKm(Number(e.target.value))}
-                className="tms-input"
+                min="0"
+                value={kmTravelled || ''}
+                onChange={(e) => setKmTravelled(Math.max(0, Number(e.target.value)))}
+                placeholder="e.g. 200"
+                required
+                className="tms-input font-bold"
               />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#16425B] mb-1">End Odometer KM *</label>
-              <input
-                type="number"
-                value={endKm || ''}
-                onChange={(e) => setEndKm(Number(e.target.value))}
-                className="tms-input"
-              />
+              <span className="text-[10px] text-[#5A6E7F] mt-0.5 block">
+                Direct KM input used to calculate fuel mileage (KM Travelled ÷ Litres).
+              </span>
             </div>
 
             <div>

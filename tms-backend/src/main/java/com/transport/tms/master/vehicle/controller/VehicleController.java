@@ -40,7 +40,7 @@ public class VehicleController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_ACCOUNTS', 'VEHICLE_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_ACCOUNTS', 'ROLE_WORKER', 'VEHICLE_MANAGE')")
     @Operation(summary = "Register a new vehicle")
     public ResponseEntity<ApiResponse<Vehicle>> createVehicle(@Valid @RequestBody Vehicle vehicle) {
         return ResponseEntity.ok(ApiResponse.ok("Vehicle created successfully", vehicleService.createVehicle(vehicle)));

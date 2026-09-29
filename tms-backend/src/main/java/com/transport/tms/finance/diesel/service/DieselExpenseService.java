@@ -42,12 +42,14 @@ public class DieselExpenseService {
         String stationName = station != null ? station.getName() : request.getFuelStationName();
         BigDecimal totalAmount = request.getLitres().multiply(request.getRatePerLitre());
 
-        BigDecimal kmRun = null;
+        BigDecimal kmRun = request.getKmRun();
         BigDecimal mileage = null;
 
-        if (request.getStartKm() != null && request.getEndKm() != null) {
+        if (kmRun != null && kmRun.compareTo(BigDecimal.ZERO) >= 0 && request.getLitres() != null && request.getLitres().compareTo(BigDecimal.ZERO) > 0) {
+            mileage = kmRun.divide(request.getLitres(), 2, RoundingMode.HALF_UP);
+        } else if (request.getStartKm() != null && request.getEndKm() != null) {
             kmRun = request.getEndKm().subtract(request.getStartKm());
-            if (kmRun.compareTo(BigDecimal.ZERO) > 0 && request.getLitres().compareTo(BigDecimal.ZERO) > 0) {
+            if (kmRun.compareTo(BigDecimal.ZERO) > 0 && request.getLitres() != null && request.getLitres().compareTo(BigDecimal.ZERO) > 0) {
                 mileage = kmRun.divide(request.getLitres(), 2, RoundingMode.HALF_UP);
             }
             vehicle.setCurrentKm(request.getEndKm());

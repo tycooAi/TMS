@@ -44,8 +44,8 @@ public class CustomerController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_ACCOUNTS', 'CUSTOMER_MANAGE')")
-    @Operation(summary = "Create customer (Manager/Accounts/Admin)")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_ACCOUNTS', 'ROLE_WORKER', 'CUSTOMER_MANAGE')")
+    @Operation(summary = "Create customer (Manager/Accounts/Admin/Worker)")
     public ResponseEntity<ApiResponse<Customer>> createCustomer(@Valid @RequestBody Customer customer) {
         return ResponseEntity.ok(ApiResponse.ok("Customer created successfully", customerService.createCustomer(customer)));
     }

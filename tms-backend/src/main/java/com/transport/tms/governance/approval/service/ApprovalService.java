@@ -7,6 +7,8 @@ import com.transport.tms.governance.correction.dto.CorrectionDto;
 import com.transport.tms.governance.correction.entity.CorrectionRequest;
 import com.transport.tms.governance.correction.entity.CorrectionRequestItem;
 import com.transport.tms.governance.correction.repository.CorrectionRequestRepository;
+import com.transport.tms.master.customer.entity.Customer;
+import com.transport.tms.master.customer.repository.CustomerRepository;
 import com.transport.tms.security.UserPrincipal;
 import com.transport.tms.trip.entity.Trip;
 import com.transport.tms.trip.repository.TripRepository;
@@ -27,6 +29,7 @@ public class ApprovalService {
 
     private final CorrectionRequestRepository correctionRepository;
     private final TripRepository tripRepository;
+    private final CustomerRepository customerRepository;
     private final AuditService auditService;
     private final IdGenerator idGenerator;
 
@@ -57,6 +60,23 @@ public class ApprovalService {
 
             for (CorrectionDto.FieldChangeRequest change : request.getChanges()) {
                 String oldValue = getTripFieldValue(trip, change.getField());
+                CorrectionRequestItem item = CorrectionRequestItem.builder()
+                        .request(correction)
+                        .fieldName(change.getField())
+                        .oldValue(oldValue)
+                        .requestedValue(change.getNewValue())
+                        .build();
+                correction.getItems().add(item);
+            }
+        } else if ("CUSTOMER".equalsIgnoreCase(request.getEntityType())) {
+            Customer customer = customerRepository.findById(request.getEntityId())
+                    .orElseThrow(() -> new Exceptions.ResourceNotFoundException("Customer", "id", request.getEntityId()));
+
+            identifier = "Customer " + customer.getId() + " (" + customer.getName() + ")";
+            correction.setEntityIdentifier(identifier);
+
+            for (CorrectionDto.FieldChangeRequest change : request.getChanges()) {
+                String oldValue = getCustomerFieldValue(customer, change.getField());
                 CorrectionRequestItem item = CorrectionRequestItem.builder()
                         .request(correction)
                         .fieldName(change.getField())
@@ -116,6 +136,33 @@ public class ApprovalService {
                 );
             }
             tripRepository.save(trip);
+        } else if ("CUSTOMER".equalsIgnoreCase(request.getEntityType())) {
+            Customer customer = customerRepository.findById(request.getEntityId())
+                    .orElseThrow(() -> new Exceptions.ResourceNotFoundException("Customer", "id", request.getEntityId()));
+
+            for (CorrectionRequestItem item : request.getItems()) {
+                if ("phone".equalsIgnoreCase(item.getFieldName())) {
+                    if (customerRepository.existsByPhoneAndIdNot(item.getRequestedValue(), customer.getId())) {
+                        throw new Exceptions.BadRequestException("Phone number " + item.getRequestedValue() + " is already registered to another customer.");
+                    }
+                }
+
+                applyCustomerFieldChange(customer, item.getFieldName(), item.getRequestedValue());
+
+                // Record audit log entry
+                auditService.recordAudit(
+                        "CUSTOMER",
+                        customer.getId(),
+                        "UPDATE",
+                        item.getFieldName(),
+                        item.getOldValue(),
+                        item.getRequestedValue(),
+                        request.getReason(),
+                        currentUser.getFullName(),
+                        request.getId()
+                );
+            }
+            customerRepository.save(customer);
         }
 
         request.setStatus("APPROVED");
@@ -176,16 +223,45 @@ public class ApprovalService {
                 }
             }
             case "material" -> trip.setMaterial(newValue);
-            case "appliedrate", "rate" -> {
+            case "appliedrate", "rate", "billingrate" -> {
                 BigDecimal rate = new BigDecimal(newValue);
                 trip.setAppliedRate(rate);
+                trip.setBillingRate(rate);
                 if (trip.getQuantity() != null && !Boolean.TRUE.equals(trip.getIsNoLoad())) {
                     trip.setTotalAmount(trip.getQuantity().multiply(rate));
                 }
             }
+            case "transportrate" -> trip.setTransportRate(new BigDecimal(newValue));
+            case "purchaserate" -> trip.setPurchaseRate(new BigDecimal(newValue));
+            case "perkmrate" -> trip.setPerKmRate(new BigDecimal(newValue));
             case "source" -> trip.setSource(newValue);
             case "deliverylocation" -> trip.setDeliveryLocation(newValue);
             case "notes" -> trip.setNotes(newValue);
+        }
+    }
+
+    private String getCustomerFieldValue(Customer customer, String fieldName) {
+        return switch (fieldName.toLowerCase()) {
+            case "name" -> customer.getName();
+            case "phone" -> customer.getPhone();
+            case "alternatephone" -> customer.getAlternatePhone() != null ? customer.getAlternatePhone() : "";
+            case "address" -> customer.getAddress();
+            case "gstin" -> customer.getGstin() != null ? customer.getGstin() : "";
+            case "creditterms" -> customer.getCreditTerms() != null ? customer.getCreditTerms() : "";
+            case "notes" -> customer.getNotes() != null ? customer.getNotes() : "";
+            default -> "";
+        };
+    }
+
+    private void applyCustomerFieldChange(Customer customer, String fieldName, String newValue) {
+        switch (fieldName.toLowerCase()) {
+            case "name" -> customer.setName(newValue);
+            case "phone" -> customer.setPhone(newValue);
+            case "alternatephone" -> customer.setAlternatePhone(newValue);
+            case "address" -> customer.setAddress(newValue);
+            case "gstin" -> customer.setGstin(newValue);
+            case "creditterms" -> customer.setCreditTerms(newValue);
+            case "notes" -> customer.setNotes(newValue);
         }
     }
 }

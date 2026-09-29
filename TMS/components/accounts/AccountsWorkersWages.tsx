@@ -7,11 +7,17 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { StatusBadge } from '../ui/StatusBadge';
 import { formatCurrency, calculateNetWage } from '../../lib/calculations';
-import { DollarSign, Users, Plus } from '../ui/Icons';
+import { DollarSign, Users, Plus, Search, FileText } from '../ui/Icons';
 import { Worker } from '../../types';
+import { downloadCSV } from '../../lib/csvExport';
 
 export function AccountsWorkersWages() {
   const { workers, accounts, recordWorkerWage } = useTmsStore();
+
+  const [query, setQuery] = useState('');
+  const [workerFilter, setWorkerFilter] = useState('ALL');
+  const [periodFilter, setPeriodFilter] = useState('September 2026');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'Pending' | 'Paid'>('ALL');
 
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
   const [wageAmount, setWageAmount] = useState<number>(0);
@@ -21,6 +27,63 @@ export function AccountsWorkersWages() {
   const [reference, setReference] = useState('');
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [error, setError] = useState('');
+
+  const filteredWorkers = workers.filter((w) => {
+    const q = query.trim().toLowerCase();
+    const matchesQ =
+      !q ||
+      w.name.toLowerCase().includes(q) ||
+      w.id.toLowerCase().includes(q) ||
+      w.phone.toLowerCase().includes(q) ||
+      w.role.toLowerCase().includes(q);
+
+    const matchesWorker = workerFilter === 'ALL' || w.id === workerFilter;
+
+    const pending = Math.max(0, w.salary - w.paid);
+    const matchesStatus =
+      statusFilter === 'ALL' ||
+      (statusFilter === 'Pending' && pending > 0) ||
+      (statusFilter === 'Paid' && pending === 0);
+
+    return matchesQ && matchesWorker && matchesStatus;
+  });
+
+  const handleExportCSV = () => {
+    const headers = [
+      'Worker ID',
+      'Worker Name',
+      'Period',
+      'Role',
+      'Wage / Salary (₹)',
+      'Advance (₹)',
+      'Deduction (₹)',
+      'Net Payable (₹)',
+      'Paid Amount (₹)',
+      'Pending Balance (₹)',
+      'Payment Status',
+      'Assigned Location',
+    ];
+    const rows = filteredWorkers.map((w) => {
+      const pending = Math.max(0, w.salary - w.paid);
+      const netPayable = Math.max(0, w.salary - (w.advance || 0) - (w.deduction || 0));
+      return [
+        w.id,
+        w.name,
+        periodFilter,
+        w.role,
+        w.salary,
+        w.advance || 0,
+        w.deduction || 0,
+        netPayable,
+        w.paid || 0,
+        pending,
+        pending > 0 ? 'Pending' : 'Paid',
+        w.assignedLocation || 'Madurai Yard',
+      ];
+    });
+    const periodSlug = periodFilter === 'ALL' ? 'september_2026' : periodFilter.toLowerCase().replace(/\s+/g, '_');
+    downloadCSV(`sri_amman_arul_wages_${periodSlug}.csv`, headers, rows);
+  };
 
   const totalMonthlyPayroll = workers.reduce((sum, w) => sum + w.salary, 0);
   const totalPaid = workers.reduce((sum, w) => sum + w.paid, 0);
@@ -105,6 +168,65 @@ export function AccountsWorkersWages() {
         </div>
       </div>
 
+      {/* FILTER & CSV EXPORT CONTROLS */}
+      <div className="bg-white p-4 rounded-lg border border-[#D9DBD6] mb-6 flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full md:w-72">
+          <Search className="absolute left-3 top-2.5 text-[#5A6E7F]" size={16} />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search worker ID, name, role..."
+            className="tms-input pl-9"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <select
+            value={workerFilter}
+            onChange={(e) => setWorkerFilter(e.target.value)}
+            className="tms-input w-40"
+          >
+            <option value="ALL">All Workers</option>
+            {workers.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.id} - {w.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={periodFilter}
+            onChange={(e) => setPeriodFilter(e.target.value)}
+            className="tms-input w-36"
+          >
+            <option value="September 2026">September 2026</option>
+            <option value="August 2026">August 2026</option>
+            <option value="July 2026">July 2026</option>
+            <option value="ALL">All Periods</option>
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="tms-input w-32"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="Pending">Pending Only</option>
+            <option value="Paid">Paid Only</option>
+          </select>
+
+          <button
+            onClick={handleExportCSV}
+            className="btn-secondary flex items-center gap-1.5 shrink-0"
+            title="Export filtered worker wage records to CSV"
+          >
+            <FileText size={14} />
+            Export CSV
+          </button>
+        </div>
+      </div>
+
       {/* WAGES ROSTER TABLE */}
       <div className="table-container">
         <table className="tms-table">
@@ -123,7 +245,7 @@ export function AccountsWorkersWages() {
             </tr>
           </thead>
           <tbody>
-            {workers.map((w) => {
+            {filteredWorkers.map((w) => {
               const pending = Math.max(0, w.salary - w.paid);
               return (
                 <tr key={w.id}>

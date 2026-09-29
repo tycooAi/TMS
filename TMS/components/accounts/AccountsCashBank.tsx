@@ -7,7 +7,8 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { StatusBadge } from '../ui/StatusBadge';
 import { formatCurrency } from '../../lib/calculations';
-import { DollarSign, RefreshCw, Plus } from '../ui/Icons';
+import { DollarSign, RefreshCw, Plus, FileText, Search } from '../ui/Icons';
+import { downloadCSV } from '../../lib/csvExport';
 
 export function AccountsCashBank() {
   const { accounts, transactions, recordAccountTransfer } = useTmsStore();
@@ -21,12 +22,73 @@ export function AccountsCashBank() {
   const [reference, setReference] = useState('');
   const [error, setError] = useState('');
 
+  // Filtering state
+  const [accountFilter, setAccountFilter] = useState('ALL');
+  const [typeFilter, setTypeFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+
   const totalTreasury = accounts.reduce((sum, a) => sum + a.balance, 0);
 
   // Filter transfers & cash/bank related transactions
   const treasuryTransactions = transactions.filter(
     (t) => t.account || t.type === 'TRANSFER'
   );
+
+  const filteredTreasuryTransactions = treasuryTransactions.filter((tx) => {
+    const matchesAccount =
+      accountFilter === 'ALL' ||
+      (tx.account && tx.account.toLowerCase().includes(accountFilter.toLowerCase())) ||
+      (accountFilter.toLowerCase().includes('cash') && tx.account?.toLowerCase().includes('cash')) ||
+      (accountFilter.toLowerCase().includes('bank') && (tx.account?.toLowerCase().includes('bank') || tx.account?.toLowerCase().includes('sbi') || tx.account?.toLowerCase().includes('hdfc')));
+
+    const matchesType =
+      typeFilter === 'ALL' ||
+      tx.type === typeFilter ||
+      (typeFilter === 'RECEIPT' && (tx.credit > 0 || tx.type === 'CUSTOMER_PAYMENT')) ||
+      (typeFilter === 'PAYMENT' && (tx.debit > 0 || tx.type === 'DIESEL' || tx.type === 'MAINTENANCE' || tx.type === 'SALARY' || tx.type === 'EXPENSE')) ||
+      (typeFilter === 'TRANSFER' && tx.type === 'TRANSFER');
+
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      tx.id.toLowerCase().includes(q) ||
+      tx.entity.toLowerCase().includes(q) ||
+      (tx.reference && tx.reference.toLowerCase().includes(q)) ||
+      (tx.notes && tx.notes.toLowerCase().includes(q)) ||
+      (tx.account && tx.account.toLowerCase().includes(q));
+
+    return matchesAccount && matchesType && matchesSearch;
+  });
+
+  const handleExportCSV = () => {
+    const headers = [
+      'Transaction ID',
+      'Date',
+      'Party / Entity',
+      'Description / Reference',
+      'Account',
+      'Debit (Withdrawal)',
+      'Credit (Deposit)',
+      'Transaction Type',
+      'Status',
+    ];
+
+    const rows = filteredTreasuryTransactions.map((tx) => [
+      tx.id,
+      tx.date,
+      tx.entity,
+      tx.notes || tx.reference || '—',
+      tx.account || '—',
+      tx.debit > 0 ? tx.debit : 0,
+      tx.credit > 0 ? tx.credit : 0,
+      tx.type.replace(/_/g, ' '),
+      tx.status,
+    ]);
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const accTag = accountFilter !== 'ALL' ? `_${accountFilter.replace(/\s+/g, '_')}` : '';
+    downloadCSV(`cash_bank_transactions${accTag}_${dateStr}.csv`, headers, rows);
+  };
 
   const handleOpenTransfer = () => {
     setTransferAmount(10000);
@@ -100,12 +162,67 @@ export function AccountsCashBank() {
 
       {/* TREASURY ACTIVITY MANIFEST */}
       <div className="bg-white rounded-lg border border-[#D9DBD6] p-5">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
           <div>
             <h2 className="text-sm font-bold text-[#16425B]">Recent Treasury Ledger Activity</h2>
             <p className="text-xs text-[#5A6E7F]">
-              Total Liquid Treasury: <strong>{formatCurrency(totalTreasury)}</strong>
+              Total Liquid Treasury: <strong>{formatCurrency(totalTreasury)}</strong> · Showing {filteredTreasuryTransactions.length} of {treasuryTransactions.length} entries
             </p>
+          </div>
+          <button
+            onClick={handleExportCSV}
+            className="btn-secondary text-xs flex items-center gap-1.5"
+            title="Export filtered cash & bank transactions as CSV"
+          >
+            <FileText size={14} />
+            Export CSV
+          </button>
+        </div>
+
+        {/* FILTERS */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 p-3 bg-[#f8faf5] rounded-lg border border-[#D9DBD6]">
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 text-[#5A6E7F]" size={15} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search reference, party, account..."
+              className="tms-input pl-9 text-xs"
+            />
+          </div>
+
+          <div>
+            <select
+              value={accountFilter}
+              onChange={(e) => setAccountFilter(e.target.value)}
+              className="tms-input text-xs"
+            >
+              <option value="ALL">All Accounts</option>
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.name}>
+                  {acc.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="tms-input text-xs"
+            >
+              <option value="ALL">All Transaction Types</option>
+              <option value="RECEIPT">Receipts (Deposit)</option>
+              <option value="PAYMENT">Payments (Withdrawal)</option>
+              <option value="TRANSFER">Internal Transfers</option>
+              <option value="CUSTOMER_PAYMENT">Customer Payments</option>
+              <option value="DIESEL">Diesel</option>
+              <option value="MAINTENANCE">Maintenance</option>
+              <option value="SALARY">Salary / Wages</option>
+              <option value="EXPENSE">Other Expenses</option>
+            </select>
           </div>
         </div>
 
@@ -124,7 +241,7 @@ export function AccountsCashBank() {
               </tr>
             </thead>
             <tbody>
-              {treasuryTransactions.map((tx) => (
+              {filteredTreasuryTransactions.map((tx) => (
                 <tr key={tx.id}>
                   <td className="font-bold text-[#2F668F]">{tx.id}</td>
                   <td>{tx.date}</td>
@@ -148,6 +265,13 @@ export function AccountsCashBank() {
                   </td>
                 </tr>
               ))}
+              {filteredTreasuryTransactions.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="text-center py-8 text-[#5A6E7F] text-xs">
+                    No transactions match the selected account, type, or search filter.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

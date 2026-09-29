@@ -64,6 +64,12 @@ public class TripDto {
         private String noLoadReason;
         private String notes;
         private String deliveryProof;
+        private String status;
+
+        private BigDecimal billingRate;
+        private BigDecimal transportRate;
+        private BigDecimal purchaseRate;
+        private BigDecimal perKmRate;
     }
 
     @Data
@@ -99,6 +105,10 @@ public class TripDto {
         private BigDecimal tripKm;
         // Financial fields
         private BigDecimal appliedRate;
+        private BigDecimal billingRate;
+        private BigDecimal transportRate;
+        private BigDecimal purchaseRate;
+        private BigDecimal perKmRate;
         private String rateUnit;
         private BigDecimal totalAmount;
         private String status;
@@ -152,6 +162,11 @@ public class TripDto {
         private String enteredBy;
         private String notes;
         private String deliveryProof;
+        private BigDecimal billingRate;
+        private BigDecimal transportRate;
+        private BigDecimal purchaseRate;
+        private BigDecimal perKmRate;
+        private BigDecimal appliedRate;
         private LocalDateTime createdAt;
     }
 }

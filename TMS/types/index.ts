@@ -134,14 +134,14 @@ export interface LocationItem {
 
 export interface ConfiguredRate {
   id: string;
-  rateType: 'CUSTOMER' | 'CRUSHER' | 'TRANSPORT';
+  rateType: 'CUSTOMER' | 'CRUSHER' | 'TRANSPORT' | 'PER_KM';
   customerId?: string;
   sourceId?: string;
   material: string;
   loadingLocation: string;
   deliveryLocation: string;
   rate: number;
-  unit: 'Ton' | 'CFT' | 'Load';
+  unit: 'Ton' | 'CFT' | 'Load' | 'KM';
   effectiveFrom: string;
   status: 'ACTIVE' | 'INACTIVE';
 }
@@ -175,6 +175,10 @@ export interface Trip {
   tripKm?: number;
   // Configured rate frozen at time of creation (Historical Rate Preservation)
   appliedRate: number;
+  billingRate?: number;
+  transportRate?: number;
+  purchaseRate?: number;
+  perKmRate?: number;
   rateUnit: 'Ton' | 'CFT' | 'Load';
   totalAmount?: number; // quantity * appliedRate (Worker cannot view this)
   status: TripStatus;
@@ -185,6 +189,7 @@ export interface Trip {
   notes?: string;
   deliveryProof?: string;
   invoiceId?: string;
+  customerTransactionType?: 'Cash' | 'Credit';
 }
 
 export interface InvoiceLineItem {
@@ -268,8 +273,8 @@ export interface DieselRecord {
   litres: number;
   ratePerLitre: number;
   totalAmount: number; // litres * rate
-  startKm: number;
-  endKm: number;
+  startKm?: number;
+  endKm?: number;
   distanceKm: number; // endKm - startKm
   mileage: number; // distanceKm / litres
   paymentAccount: string;
@@ -339,7 +344,9 @@ export interface CorrectionRequest {
   id: string; // CRQ-001
   transactionId: string;
   entityName: string;
+  entityType?: string;
   date: string;
+  requestedDate?: string;
   requestedBy: string;
   originalValue: string;
   requestedValue: string;
@@ -385,3 +392,83 @@ export interface PermissionMatrix {
   canExportData: boolean;
   canImportData: boolean;
 }
+
+export interface SystemControlState {
+  id: number;
+  systemState: 'ONLINE' | 'MAINTENANCE' | 'SHUTDOWN';
+  maintenanceTitle: string;
+  maintenanceMessage: string;
+  expectedRecoveryTime?: string | null;
+  shutdownReason?: string | null;
+  shutdownBy?: string | null;
+  shutdownAt?: string | null;
+  allowAdminBypass: boolean;
+  allowWorkerTrips: boolean;
+  allowAccountsPayments: boolean;
+  lockSensitiveOps: boolean;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface FeatureFlag {
+  flagKey: string;
+  name: string;
+  description: string;
+  category: string;
+  enabled: boolean;
+  updatedBy: string;
+  updatedAt?: string;
+}
+
+export interface BackupRecord {
+  id: string;
+  backupName: string;
+  backupType: string;
+  filePath: string;
+  fileSizeBytes: number;
+  checksumSha256?: string;
+  status: 'COMPLETED' | 'FAILED' | 'VERIFIED' | 'RESTORED';
+  entityCountsJson?: string;
+  createdBy: string;
+  createdAt: string;
+  verifiedAt?: string | null;
+  restoredAt?: string | null;
+  notes?: string;
+}
+
+export interface BackupSchedule {
+  id: string;
+  scheduleType: string;
+  enabled: boolean;
+  dayOfWeek: number;
+  dayOfMonth: number;
+  executionTime: string;
+  retentionCount: number;
+  destination: string;
+  lastRunAt?: string | null;
+  nextRunAt?: string | null;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface SystemHealth {
+  backendStatus: string;
+  databaseStatus: string;
+  apiStatus: string;
+  backupStatus: string;
+  storageStatus: string;
+  auditStatus: string;
+  systemState: string;
+  environment: string;
+  appVersion: string;
+  dbVersion: string;
+  activeDbPool: string;
+  jvmMemory: string;
+  uptimeSeconds: number;
+  tableCounts: Record<string, number>;
+  totalBackups: number;
+  lastBackup?: BackupRecord | null;
+  lastRecovery?: string | null;
+  activeSessionsCount: number;
+}
+

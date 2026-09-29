@@ -21,6 +21,154 @@ export function AccountsReports() {
     { id: 'treasury', title: 'Cash & Bank Treasury Statement', desc: 'Derived balances and internal transfers' },
   ];
 
+  const handleExportCSV = () => {
+    try {
+      let headers: string[] = [];
+      let rows: (string | number)[][] = [];
+
+      if (selectedReport === 'receivables') {
+        headers = [
+          'Customer ID',
+          'Customer Name',
+          'Contact Phone',
+          'Credit Terms',
+          'Total Billed (INR)',
+          'Total Paid (INR)',
+          'Current Outstanding (INR)',
+        ];
+        rows = customers.map((c) => [
+          c.id,
+          c.name,
+          c.phone,
+          c.creditTerms || 'Standard',
+          c.totalCredit,
+          c.totalPaid,
+          c.balance,
+        ]);
+      } else if (selectedReport === 'payments') {
+        headers = [
+          'Transaction ID',
+          'Date',
+          'Customer',
+          'Amount (INR)',
+          'Payment Mode',
+          'Account Credited',
+          'Reference',
+        ];
+        rows = transactions
+          .filter((t) => t.type === 'CUSTOMER_PAYMENT')
+          .map((t) => [
+            t.id,
+            t.date,
+            t.entity,
+            t.amount,
+            t.paymentMode || 'UPI',
+            t.account || 'Main Account',
+            t.reference || '—',
+          ]);
+      } else if (selectedReport === 'diesel') {
+        headers = [
+          'Log ID',
+          'Date',
+          'Vehicle No',
+          'Driver',
+          'Station',
+          'Litres',
+          'Rate (INR)',
+          'Total Amount (INR)',
+          'Mileage (KM/L)',
+        ];
+        rows = dieselRecords.map((d) => [
+          d.id,
+          d.date,
+          d.vehicleRegistration,
+          d.driverName,
+          d.fuelStation,
+          d.litres,
+          d.ratePerLitre,
+          d.totalAmount,
+          d.mileage,
+        ]);
+      } else if (selectedReport === 'expenses') {
+        headers = [
+          'Voucher ID',
+          'Date',
+          'Entity / Vehicle',
+          'Category',
+          'Description',
+          'Amount (INR)',
+          'Payment Mode',
+        ];
+        const vRows = vehicleExpenses.map((v) => [
+          v.id,
+          v.date,
+          v.vehicleRegistration,
+          v.expenseType,
+          v.serviceStationSupplier || v.notes || '—',
+          v.amount,
+          v.paymentMode,
+        ]);
+        const oRows = otherExpenses.map((o) => [
+          o.id,
+          o.date,
+          'Operations',
+          o.category,
+          o.description,
+          o.amount,
+          o.paymentMode,
+        ]);
+        rows = [...vRows, ...oRows];
+      } else if (selectedReport === 'treasury') {
+        headers = [
+          'Account ID',
+          'Account Name',
+          'Type',
+          'Opening Balance (INR)',
+          'Current Derived Balance (INR)',
+        ];
+        rows = accounts.map((a) => [
+          a.id,
+          a.name,
+          a.type,
+          a.openingBalance,
+          a.balance,
+        ]);
+      }
+
+      if (rows.length === 0) {
+        alert('No report data available to export.');
+        return;
+      }
+
+      const escapeCSV = (val: string | number) => {
+        const str = String(val ?? '');
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
+
+      const csvContent = [
+        headers.map(escapeCSV).join(','),
+        ...rows.map((row) => row.map(escapeCSV).join(',')),
+      ].join('\r\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const filename = `Sri_Amman_Arul_${selectedReport}_${fromDate}_to_${toDate}.csv`;
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('CSV Export Error:', err);
+      alert(`Failed to export CSV: ${err.message || 'Unknown error'}`);
+    }
+  };
+
   return (
     <div>
       <PageHeader
@@ -77,8 +225,8 @@ export function AccountsReports() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => alert('Frontend prototype: Exporting spreadsheet format to CSV...')}
-            className="btn-secondary text-xs py-1.5"
+            onClick={handleExportCSV}
+            className="btn-secondary text-xs py-1.5 flex items-center gap-1.5"
           >
             <Download size={14} />
             Export CSV

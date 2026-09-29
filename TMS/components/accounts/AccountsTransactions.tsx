@@ -7,8 +7,9 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { StatusBadge } from '../ui/StatusBadge';
 import { formatCurrency } from '../../lib/calculations';
-import { Search, Shield, AlertTriangle } from '../ui/Icons';
+import { Search, Shield, AlertTriangle, FileText } from '../ui/Icons';
 import { FinancialTransaction } from '../../types';
+import { downloadCSV } from '../../lib/csvExport';
 
 export function AccountsTransactions() {
   const { transactions, requestCorrection } = useTmsStore();
@@ -84,12 +85,57 @@ export function AccountsTransactions() {
     setSelectedTx(null);
   };
 
+  const handleExportCSV = () => {
+    const headers = [
+      'Transaction ID',
+      'Date',
+      'Party / Entity',
+      'Transaction Type',
+      'Reference / Notes',
+      'Account',
+      'Payment Mode',
+      'Debit',
+      'Credit',
+      'Amount',
+      'Status',
+      'Recorded By',
+    ];
+
+    const rows = filteredTransactions.map((tx) => [
+      tx.id,
+      tx.date,
+      tx.entity,
+      tx.type.replace(/_/g, ' '),
+      tx.notes || tx.reference || '—',
+      tx.account || '—',
+      tx.paymentMode || '—',
+      tx.debit > 0 ? tx.debit : 0,
+      tx.credit > 0 ? tx.credit : 0,
+      tx.amount,
+      tx.status,
+      tx.createdBy || '—',
+    ]);
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const typeTag = typeFilter !== 'ALL' ? `_${typeFilter}` : '';
+    downloadCSV(`central_ledger_transactions${typeTag}_${dateStr}.csv`, headers, rows);
+  };
+
   return (
     <div>
       <PageHeader
         title="Central Financial Ledger"
         description="Unified double-entry audit journal · Posted records are locked against direct mutation"
-      />
+      >
+        <button
+          onClick={handleExportCSV}
+          className="btn-secondary text-xs flex items-center gap-1.5"
+          title="Export filtered central ledger transactions as CSV"
+        >
+          <FileText size={15} />
+          Export CSV ({filteredTransactions.length})
+        </button>
+      </PageHeader>
 
       {/* FILTER & SEARCH BAR */}
       <div className="bg-white p-4 rounded-lg border border-[#D9DBD6] mb-6 flex flex-col md:flex-row gap-3 items-center justify-between">
