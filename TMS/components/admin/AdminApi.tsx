@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../../lib/api';
 import { PageHeader } from '../layout/PageHeader';
 import {
   Server,
@@ -193,11 +194,13 @@ export function AdminApi() {
   const [pingResponse, setPingResponse] = useState<string | null>(null);
   const [activeEndpoint, setActiveEndpoint] = useState<EndpointDefinition>(BACKEND_ENDPOINTS[0]);
 
+  const rootBackendUrl = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
+
   // LIVE HEALTH PROBE
   const runLivePing = async () => {
     setPingStatus('checking');
     try {
-      const res = await fetch('http://localhost:8080/');
+      const res = await fetch(`${rootBackendUrl}/`);
       if (res.ok) {
         const data = await res.json();
         setPingStatus('healthy');
@@ -208,7 +211,7 @@ export function AdminApi() {
       }
     } catch (err: unknown) {
       setPingStatus('down');
-      setPingResponse(err instanceof Error ? err.message : 'Connection failed to http://localhost:8080');
+      setPingResponse(err instanceof Error ? err.message : `Connection failed to ${rootBackendUrl}`);
     }
   };
 
@@ -237,13 +240,13 @@ export function AdminApi() {
         description="Spring Boot 3.3.4 REST API endpoints · Inspect controller mapping, request/response DTOs, and live endpoint status"
       >
         <a
-          href="http://localhost:8080/swagger-ui/index.html"
+          href={`${rootBackendUrl}/swagger-ui/index.html`}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#16425B] text-white text-xs font-mono font-bold rounded-md hover:bg-[#2F668F] transition-all shadow-sm"
         >
           <ExternalLink size={14} />
-          Swagger UI Interactive (Port 8080)
+          Swagger UI Interactive
         </a>
       </PageHeader>
 
@@ -276,7 +279,7 @@ export function AdminApi() {
                 {pingStatus === 'healthy' ? 'ONLINE (HTTP 200)' : pingStatus === 'checking' ? 'PROBING...' : 'DISCONNECTED'}
               </span>
             </div>
-            <p className="text-xs text-[#5A6E7F] mt-0.5 font-mono">Target Host: http://localhost:8080 | Java 17 | PostgreSQL Dialect</p>
+            <p className="text-xs text-[#5A6E7F] mt-0.5 font-mono">Target Host: {rootBackendUrl} | Java 17 | PostgreSQL Dialect</p>
           </div>
         </div>
 
@@ -290,7 +293,7 @@ export function AdminApi() {
             Test Connection
           </button>
           <a
-            href="http://localhost:8080/v3/api-docs"
+            href={`${rootBackendUrl}/v3/api-docs`}
             target="_blank"
             rel="noopener noreferrer"
             className="px-3 py-1.5 bg-[#e8f1f5] text-[#2F668F] rounded-lg text-xs font-bold font-mono hover:bg-[#d8e6ef] transition-colors flex items-center gap-1.5"

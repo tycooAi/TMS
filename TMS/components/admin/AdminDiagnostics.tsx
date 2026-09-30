@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { PageHeader } from '../layout/PageHeader';
 import { useTmsStore } from '../../lib/store';
+import { API_BASE_URL } from '../../lib/api';
 import {
   Wrench,
   CheckCircle,
@@ -93,7 +94,7 @@ export function AdminDiagnostics() {
     const start = Date.now();
 
     try {
-      const res = await fetch('http://localhost:8080/api/v1/system/status');
+      const res = await fetch(`${API_BASE_URL}/system/status`);
       const latency = Date.now() - start;
 
       setChecks((prev) =>

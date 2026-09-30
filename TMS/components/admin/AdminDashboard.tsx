@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useTmsStore } from '../../lib/store';
 import { DEMO_USERS } from '../../lib/auth';
+import { API_BASE_URL } from '../../lib/api';
 import { PageHeader } from '../layout/PageHeader';
 import {
   Server,
@@ -52,9 +53,11 @@ export function AdminDashboard() {
     rates,
   } = store;
 
+  const rootBackendUrl = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
+
   // SYSTEM HEALTH LIVE PING
   const [backendStatus, setBackendStatus] = useState<'checking' | 'healthy' | 'down'>('checking');
-  const [backendMeta, setBackendMeta] = useState<string>('Probing Spring Boot (Port 8080)...');
+  const [backendMeta, setBackendMeta] = useState<string>('Probing Spring Boot API...');
 
   // SYSTEM SEARCH STATE
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -63,7 +66,7 @@ export function AdminDashboard() {
   const checkBackendHealth = async () => {
     setBackendStatus('checking');
     try {
-      const res = await fetch('http://localhost:8080/');
+      const res = await fetch(`${rootBackendUrl}/`);
       if (res.ok) {
         const json = await res.json();
         setBackendStatus('healthy');
@@ -74,7 +77,7 @@ export function AdminDashboard() {
       }
     } catch {
       setBackendStatus('down');
-      setBackendMeta('Connection refused at http://localhost:8080');
+      setBackendMeta(`Connection refused at ${rootBackendUrl}`);
     }
   };
 
