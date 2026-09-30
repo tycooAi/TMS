@@ -28,6 +28,8 @@ export function StatusBadge({ status, className = '' }: StatusBadgeProps) {
     norm === 'PAYMENT_PENDING' ||
     norm === 'PARTIALLY_PAID' ||
     norm === 'PENDING_MD' ||
+    norm === 'PENDING_MD_APPROVAL' ||
+    norm === 'PENDING_MANAGER_APPROVAL' ||
     norm === 'CORRECTION_REQUESTED'
   ) {
     variantClass = 'bg-[#fef8eb] text-[#b45309] border-[#fde68a]';

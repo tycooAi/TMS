@@ -20,7 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -38,13 +40,16 @@ public class ApprovalService {
         String reqId = idGenerator.generateCorrectionId();
         String identifier = request.getEntityType() + " #" + request.getEntityId();
 
+        boolean isCustomer = "CUSTOMER".equalsIgnoreCase(request.getEntityType());
+        String initialStatus = isCustomer ? "PENDING_MANAGER_APPROVAL" : "PENDING_MD_APPROVAL";
+
         CorrectionRequest correction = CorrectionRequest.builder()
                 .id(reqId)
                 .entityType(request.getEntityType().toUpperCase())
                 .entityId(request.getEntityId())
                 .entityIdentifier(identifier)
                 .reason(request.getReason())
-                .status("PENDING")
+                .status(initialStatus)
                 .requestedBy(currentUser.getFullName())
                 .requestedAt(LocalDateTime.now())
                 .items(new ArrayList<>())
@@ -97,7 +102,33 @@ public class ApprovalService {
 
     @Transactional(readOnly = true)
     public List<CorrectionRequest> getPendingApprovals() {
-        return correctionRepository.findByStatusOrderByRequestedAtDesc("PENDING");
+        return getPendingMdApprovals();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CorrectionRequest> getPendingMdApprovals() {
+        return correctionRepository.findAll().stream()
+                .filter(r -> ("PENDING_MD_APPROVAL".equalsIgnoreCase(r.getStatus()) || "PENDING".equalsIgnoreCase(r.getStatus()) || "PENDING_MD".equalsIgnoreCase(r.getStatus()))
+                        && !"CUSTOMER".equalsIgnoreCase(r.getEntityType()))
+                .sorted(Comparator.comparing(CorrectionRequest::getRequestedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<CorrectionRequest> getMdApprovals() {
+        return correctionRepository.findAll().stream()
+                .filter(r -> !"CUSTOMER".equalsIgnoreCase(r.getEntityType()))
+                .sorted(Comparator.comparing(CorrectionRequest::getRequestedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<CorrectionRequest> getPendingManagerApprovals() {
+        return correctionRepository.findAll().stream()
+                .filter(r -> ("PENDING_MANAGER_APPROVAL".equalsIgnoreCase(r.getStatus()) || "PENDING".equalsIgnoreCase(r.getStatus()))
+                        && "CUSTOMER".equalsIgnoreCase(r.getEntityType()))
+                .sorted(Comparator.comparing(CorrectionRequest::getRequestedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -110,7 +141,10 @@ public class ApprovalService {
     public CorrectionRequest approveCorrection(String id, String comment, UserPrincipal currentUser) {
         CorrectionRequest request = getCorrectionById(id);
 
-        if (!"PENDING".equalsIgnoreCase(request.getStatus())) {
+        if (!"PENDING".equalsIgnoreCase(request.getStatus())
+                && !"PENDING_MD_APPROVAL".equalsIgnoreCase(request.getStatus())
+                && !"PENDING_MD".equalsIgnoreCase(request.getStatus())
+                && !"PENDING_MANAGER_APPROVAL".equalsIgnoreCase(request.getStatus())) {
             throw new Exceptions.BadRequestException("Correction request is already " + request.getStatus());
         }
 
@@ -177,7 +211,10 @@ public class ApprovalService {
     public CorrectionRequest rejectCorrection(String id, String comment, UserPrincipal currentUser) {
         CorrectionRequest request = getCorrectionById(id);
 
-        if (!"PENDING".equalsIgnoreCase(request.getStatus())) {
+        if (!"PENDING".equalsIgnoreCase(request.getStatus())
+                && !"PENDING_MD_APPROVAL".equalsIgnoreCase(request.getStatus())
+                && !"PENDING_MD".equalsIgnoreCase(request.getStatus())
+                && !"PENDING_MANAGER_APPROVAL".equalsIgnoreCase(request.getStatus())) {
             throw new Exceptions.BadRequestException("Correction request is already " + request.getStatus());
         }
 

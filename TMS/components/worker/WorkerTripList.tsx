@@ -13,7 +13,16 @@ export function WorkerTripList() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
-  const filteredTrips = trips.filter((t) => {
+  const uniqueTrips = React.useMemo(() => {
+    const seen = new Set<string>();
+    return trips.filter((t) => {
+      if (!t.id || seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    });
+  }, [trips]);
+
+  const filteredTrips = uniqueTrips.filter((t) => {
     const q = query.trim().toLowerCase();
     const matchesQuery =
       !q ||

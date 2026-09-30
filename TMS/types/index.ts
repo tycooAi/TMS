@@ -354,7 +354,7 @@ export interface CorrectionRequest {
   originalValue: string;
   requestedValue: string;
   reason: string;
-  status: 'PENDING_MD' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING_MD' | 'PENDING_MD_APPROVAL' | 'PENDING_MANAGER_APPROVAL' | 'PENDING' | 'APPROVED' | 'REJECTED';
   reviewedBy?: string;
   reviewedDate?: string;
   reviewNotes?: string;

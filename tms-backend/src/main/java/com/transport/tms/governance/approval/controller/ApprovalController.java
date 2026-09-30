@@ -36,16 +36,52 @@ public class ApprovalController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MD', 'ROLE_MANAGER', 'TRIP_APPROVE')")
-    @Operation(summary = "Get all approvals in system")
-    public ResponseEntity<ApiResponse<List<CorrectionRequest>>> getAllApprovals() {
+    @Operation(summary = "Get all approvals in system with optional role/scope filtering")
+    public ResponseEntity<ApiResponse<List<CorrectionRequest>>> getAllApprovals(
+            @RequestParam(required = false) String scope,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        boolean isMd = currentUser != null && currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equalsIgnoreCase("ROLE_MD"));
+        if ("MD".equalsIgnoreCase(scope) || (isMd && !"ALL".equalsIgnoreCase(scope))) {
+            return ResponseEntity.ok(ApiResponse.ok(approvalService.getMdApprovals()));
+        }
         return ResponseEntity.ok(ApiResponse.ok(approvalService.getAllApprovals()));
     }
 
     @GetMapping("/pending")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MD', 'ROLE_MANAGER', 'TRIP_APPROVE')")
-    @Operation(summary = "Get all pending approvals in the review queue")
-    public ResponseEntity<ApiResponse<List<CorrectionRequest>>> getPendingApprovals() {
-        return ResponseEntity.ok(ApiResponse.ok(approvalService.getPendingApprovals()));
+    @Operation(summary = "Get pending approvals in the review queue")
+    public ResponseEntity<ApiResponse<List<CorrectionRequest>>> getPendingApprovals(
+            @RequestParam(required = false) String scope,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        boolean isMd = currentUser != null && currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equalsIgnoreCase("ROLE_MD"));
+        boolean isManager = currentUser != null && currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equalsIgnoreCase("ROLE_MANAGER"));
+
+        if ("MANAGER".equalsIgnoreCase(scope) || (isManager && !isMd && !"MD".equalsIgnoreCase(scope))) {
+            return ResponseEntity.ok(ApiResponse.ok(approvalService.getPendingManagerApprovals()));
+        }
+        // Default for MD or when requested: MD pending approvals only (Accounts requests)
+        return ResponseEntity.ok(ApiResponse.ok(approvalService.getPendingMdApprovals()));
+    }
+
+    @GetMapping("/md/pending")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MD')")
+    @Operation(summary = "Get pending Accounts approvals for MD")
+    public ResponseEntity<ApiResponse<List<CorrectionRequest>>> getMdPendingApprovals() {
+        return ResponseEntity.ok(ApiResponse.ok(approvalService.getPendingMdApprovals()));
+    }
+
+    @GetMapping("/md")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MD')")
+    @Operation(summary = "Get all Accounts approvals for MD")
+    public ResponseEntity<ApiResponse<List<CorrectionRequest>>> getMdApprovals() {
+        return ResponseEntity.ok(ApiResponse.ok(approvalService.getMdApprovals()));
+    }
+
+    @GetMapping("/manager/pending")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER')")
+    @Operation(summary = "Get pending customer change approvals for Manager")
+    public ResponseEntity<ApiResponse<List<CorrectionRequest>>> getManagerPendingApprovals() {
+        return ResponseEntity.ok(ApiResponse.ok(approvalService.getPendingManagerApprovals()));
     }
 
     @GetMapping("/{id}")

@@ -130,12 +130,37 @@ export const defaultState: StoreState = {
   backupSchedules: initialBackupSchedules,
 };
 
+export function deduplicateById<T extends { id: string }>(items: T[]): T[] {
+  if (!Array.isArray(items)) return [];
+  const seen = new Set<string>();
+  const result: T[] = [];
+  for (const item of items) {
+    if (item && item.id) {
+      if (!seen.has(item.id)) {
+        seen.add(item.id);
+        result.push(item);
+      }
+    }
+  }
+  return result;
+}
+
 export function readStore(): StoreState {
   if (typeof window === 'undefined') return defaultState;
   try {
     const raw = localStorage.getItem(STORE_STORAGE_KEY);
     if (!raw) return defaultState;
-    return { ...defaultState, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    return {
+      ...defaultState,
+      ...parsed,
+      trips: deduplicateById(parsed.trips || defaultState.trips),
+      customers: deduplicateById(parsed.customers || defaultState.customers),
+      drivers: deduplicateById(parsed.drivers || defaultState.drivers),
+      invoices: deduplicateById(parsed.invoices || defaultState.invoices),
+      payments: deduplicateById(parsed.payments || defaultState.payments),
+      transactions: deduplicateById(parsed.transactions || defaultState.transactions),
+    };
   } catch {
     return defaultState;
   }
@@ -162,7 +187,11 @@ export function writeStore(state: StoreState): void {
   } catch {
     // ignore parse error and proceed
   }
-  localStorage.setItem(STORE_STORAGE_KEY, JSON.stringify(state));
+  const sanitizedState: StoreState = {
+    ...state,
+    trips: deduplicateById(state.trips || []),
+  };
+  localStorage.setItem(STORE_STORAGE_KEY, JSON.stringify(sanitizedState));
   window.dispatchEvent(new Event('tms:store-update'));
 }
 
@@ -232,20 +261,29 @@ export function useTmsStore() {
   const createTrip = useCallback(
     (trip: Trip) => {
       const current = readStore();
-      const nextTrips = [trip, ...current.trips];
+      const existingIndex = current.trips.findIndex((t) => t.id === trip.id);
+      let nextTrips: Trip[];
+      if (existingIndex >= 0) {
+        // Update existing trip in-place if ID already exists, preventing duplicate React keys
+        nextTrips = current.trips.map((t) => (t.id === trip.id ? { ...t, ...trip } : t));
+      } else {
+        nextTrips = [trip, ...current.trips];
+      }
       writeStore({
         ...current,
-        trips: nextTrips,
+        trips: deduplicateById(nextTrips),
       });
-      addAudit({
-        user: trip.enteredBy || 'Worker',
-        userRole: 'WORKER',
-        action: 'CREATE',
-        entity: 'TRIP',
-        entityId: trip.id,
-        description: `Created trip for ${trip.customerName} (${trip.material}, ${trip.quantity} ${trip.unit})`,
-        newValue: trip.status,
-      });
+      if (existingIndex < 0) {
+        addAudit({
+          user: trip.enteredBy || 'Worker',
+          userRole: 'WORKER',
+          action: 'CREATE',
+          entity: 'TRIP',
+          entityId: trip.id,
+          description: `Created trip for ${trip.customerName} (${trip.material}, ${trip.quantity} ${trip.unit})`,
+          newValue: trip.status,
+        });
+      }
     },
     [addAudit]
   );
@@ -924,21 +962,30 @@ export function useTmsStore() {
     [addAudit]
   );
 
-  // Accounts: Request Correction
+  // Accounts & Master Data: Request Correction
   const requestCorrection = useCallback(
     (
-      req: Omit<CorrectionRequest, 'id' | 'status'>,
+      req: Omit<CorrectionRequest, 'id' | 'status'> & { status?: CorrectionRequest['status'] },
       actorName = 'Anitha S'
     ) => {
       const current = readStore();
       const id = generateNextId('CRQ', current.corrections.map((c) => c.id));
+      const isCustomer =
+        req.entityType === 'CUSTOMER' ||
+        req.transactionId?.startsWith('CUS-') ||
+        req.requestedBy?.toLowerCase().includes('worker') ||
+        req.reason?.toLowerCase().includes('customer');
+
+      const initialStatus: CorrectionRequest['status'] =
+        req.status || (isCustomer ? 'PENDING_MANAGER_APPROVAL' : 'PENDING_MD');
+
       const newRequest: CorrectionRequest = {
         ...req,
         id,
-        status: 'PENDING_MD',
+        status: initialStatus,
       };
 
-      // Mark transaction status
+      // Mark transaction status if financial transaction
       const nextTx = current.transactions.map((t) =>
         t.id === req.transactionId ? { ...t, status: 'CORRECTION_REQUESTED' as any } : t
       );
@@ -949,13 +996,14 @@ export function useTmsStore() {
         transactions: nextTx,
       });
 
+      const auditRole = isCustomer ? 'WORKER' : 'ACCOUNTS';
       addAudit({
         user: actorName,
-        userRole: 'ACCOUNTS',
+        userRole: auditRole,
         action: 'UPDATE',
-        entity: 'CORRECTION_REQUEST',
+        entity: isCustomer ? 'CUSTOMER' : 'CORRECTION_REQUEST',
         entityId: id,
-        description: `Submitted correction request for ${req.transactionId}: ${req.reason}`,
+        description: `Submitted ${isCustomer ? 'customer change request' : 'correction request'} for ${req.transactionId}: ${req.reason}`,
         oldValue: req.originalValue,
         newValue: req.requestedValue,
       });
@@ -963,7 +1011,7 @@ export function useTmsStore() {
     [addAudit]
   );
 
-  // MD: Approve Correction Request
+  // MD & Manager: Approve Correction Request
   const approveCorrection = useCallback(
     (
       requestId: string,
@@ -1010,24 +1058,34 @@ export function useTmsStore() {
       });
 
       let nextCustomers = current.customers;
-      if (req.entityType === 'CUSTOMER' || req.transactionId?.startsWith('CUS-')) {
+      const isCustomer = req.entityType === 'CUSTOMER' || req.transactionId?.startsWith('CUS-');
+      if (isCustomer) {
+        let parsed: Record<string, string> = {};
         try {
-          const parsed = JSON.parse(req.requestedValue);
+          parsed = JSON.parse(req.requestedValue);
+        } catch {
+          const regex = /([a-zA-Z0-9_]+)\s*[:=]\s*["']?([^"',]+)["']?/g;
+          let match;
+          while ((match = regex.exec(req.requestedValue)) !== null) {
+            parsed[match[1]] = match[2].trim();
+          }
+        }
+        if (parsed && typeof parsed === 'object') {
           nextCustomers = current.customers.map((c) => {
             if (c.id === req.transactionId) {
               return {
                 ...c,
                 name: parsed.name !== undefined ? parsed.name : c.name,
                 phone: parsed.phone !== undefined ? parsed.phone : c.phone,
+                alternatePhone: parsed.alternatePhone !== undefined ? parsed.alternatePhone : c.alternatePhone,
                 address: parsed.address !== undefined ? parsed.address : c.address,
                 creditTerms: parsed.creditTerms !== undefined ? parsed.creditTerms : c.creditTerms,
                 gstin: parsed.gstin !== undefined ? parsed.gstin : c.gstin,
+                notes: parsed.notes !== undefined ? parsed.notes : c.notes,
               };
             }
             return c;
           });
-        } catch {
-          // fallback if requestedValue is plain string
         }
       }
 
@@ -1038,13 +1096,16 @@ export function useTmsStore() {
         customers: nextCustomers,
       });
 
+      const auditRole = isCustomer ? 'MANAGER' : 'MD';
       addAudit({
         user: approverName,
-        userRole: 'MANAGER',
+        userRole: auditRole,
         action: 'APPROVE',
-        entity: req.entityType === 'CUSTOMER' ? 'CUSTOMER' : 'CORRECTION_REQUEST',
+        entity: isCustomer ? 'CUSTOMER' : 'CORRECTION_REQUEST',
         entityId: req.transactionId || requestId,
-        description: `Approved customer change request for ${req.transactionId}. Applied requested changes.`,
+        description: isCustomer
+          ? `Approved customer change request for ${req.transactionId}. Applied requested changes.`
+          : `Approved accounts correction for ${req.transactionId}. Applied changes to ledger.`,
         oldValue: req.originalValue,
         newValue: req.requestedValue,
         reason: req.reason,
@@ -1053,7 +1114,7 @@ export function useTmsStore() {
     [addAudit]
   );
 
-  // MD: Reject Correction Request
+  // MD & Manager: Reject Correction Request
   const rejectCorrection = useCallback(
     (
       requestId: string,
@@ -1082,7 +1143,9 @@ export function useTmsStore() {
           : c
       );
 
-      // Revert transaction status
+      const isCustomer = req.entityType === 'CUSTOMER' || req.transactionId?.startsWith('CUS-');
+
+      // Revert transaction status if transaction
       const nextTx = current.transactions.map((t) =>
         t.id === req.transactionId ? { ...t, status: 'POSTED' as const } : t
       );
@@ -1093,13 +1156,17 @@ export function useTmsStore() {
         transactions: nextTx,
       });
 
+      const auditRole = isCustomer ? 'MANAGER' : 'MD';
       addAudit({
         user: approverName,
-        userRole: 'MD',
+        userRole: auditRole,
         action: 'REJECT',
-        entity: 'CORRECTION_REQUEST',
-        entityId: requestId,
-        description: `Rejected correction for transaction ${req.transactionId}. Reason: ${reason}`,
+        entity: isCustomer ? 'CUSTOMER' : 'CORRECTION_REQUEST',
+        entityId: req.transactionId || requestId,
+        description: isCustomer
+          ? `Rejected customer change request for ${req.transactionId}. Customer data unchanged. Reason: ${reason}`
+          : `Rejected accounts correction for transaction ${req.transactionId}. Reason: ${reason}`,
+        reason,
       });
     },
     [addAudit]

@@ -7,8 +7,91 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { StatusBadge } from '../ui/StatusBadge';
 import { Check, X, Eye, AlertCircle, CheckCircle2, UserRound, ArrowRight } from '../ui/Icons';
-import { CorrectionRequest } from '../../types';
+import { CorrectionRequest, Customer } from '../../types';
 import { apiClient } from '../../lib/api';
+
+function normalizeFieldKey(raw: string): string {
+  const clean = raw.toLowerCase().replace(/[\s_-]/g, '');
+  if (clean === 'name' || clean === 'customername' || clean === 'companyname') return 'name';
+  if (clean === 'phone' || clean === 'phonenumber' || clean === 'mobile' || clean === 'contact') return 'phone';
+  if (clean === 'alternatephone' || clean === 'altphone' || clean === 'secondaryphone') return 'alternatePhone';
+  if (clean === 'address' || clean === 'billingaddress' || clean === 'customeraddress') return 'address';
+  if (clean === 'creditterms' || clean === 'terms' || clean === 'paymentterms') return 'creditTerms';
+  if (clean === 'gstin' || clean === 'gst' || clean === 'gstnumber') return 'gstin';
+  if (clean === 'notes' || clean === 'remarks' || clean === 'comment') return 'notes';
+  return clean;
+}
+
+function extractValuesSafe(val: any, items?: any[]): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  if (Array.isArray(items)) {
+    for (const item of items) {
+      const k = normalizeFieldKey(item.fieldName || item.field || '');
+      const v = item.requestedValue ?? item.newValue ?? item.value;
+      if (k) result[k] = v !== undefined && v !== null ? String(v) : '';
+    }
+  }
+
+  if (val && typeof val === 'object' && !Array.isArray(val)) {
+    for (const [k, v] of Object.entries(val)) {
+      const fieldKey = normalizeFieldKey(k);
+      if (fieldKey) result[fieldKey] = v !== undefined && v !== null ? String(v) : '';
+    }
+    return result;
+  }
+
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (trimmed.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed && typeof parsed === 'object') {
+          for (const [k, v] of Object.entries(parsed)) {
+            const fieldKey = normalizeFieldKey(k);
+            if (fieldKey) result[fieldKey] = v !== undefined && v !== null ? String(v) : '';
+          }
+          return result;
+        }
+      } catch {
+        // Fallback to regex
+      }
+    }
+
+    const regex = /([a-zA-Z0-9_]+)\s*[:=]\s*["']?([^"',\n]+)["']?/g;
+    let match;
+    while ((match = regex.exec(val)) !== null) {
+      const fieldKey = normalizeFieldKey(match[1]);
+      if (fieldKey) {
+        result[fieldKey] = match[2].trim();
+      }
+    }
+  }
+
+  return result;
+}
+
+function getCustomerFieldValue(customer: Customer | undefined, fieldKey: string): string {
+  if (!customer) return '';
+  switch (fieldKey) {
+    case 'name':
+      return customer.name || '';
+    case 'phone':
+      return customer.phone || '';
+    case 'alternatePhone':
+      return customer.alternatePhone || '';
+    case 'address':
+      return customer.address || '';
+    case 'creditTerms':
+      return customer.creditTerms || '';
+    case 'gstin':
+      return customer.gstin || '';
+    case 'notes':
+      return customer.notes || '';
+    default:
+      return (customer as any)[fieldKey] ? String((customer as any)[fieldKey]) : '';
+  }
+}
 
 export function ManagerCustomerRequests() {
   const { corrections, customers, approveCorrection, rejectCorrection } = useTmsStore();
@@ -33,19 +116,16 @@ export function ManagerCustomerRequests() {
 
   const filteredRequests = customerRequests.filter((c) => {
     if (filterStatus === 'ALL') return true;
-    if (filterStatus === 'PENDING') return c.status === 'PENDING_MD' || (c.status as string) === 'PENDING';
+    if (filterStatus === 'PENDING')
+      return (
+        c.status === 'PENDING_MANAGER_APPROVAL' ||
+        c.status === 'PENDING_MD' ||
+        (c.status as string) === 'PENDING'
+      );
     if (filterStatus === 'APPROVED') return c.status === 'APPROVED';
     if (filterStatus === 'REJECTED') return c.status === 'REJECTED';
     return true;
   });
-
-  const parseJsonSafe = (str: string) => {
-    try {
-      return JSON.parse(str);
-    } catch {
-      return null;
-    }
-  };
 
   const handleOpenDiff = (req: CorrectionRequest) => {
     setSelectedReq(req);
@@ -59,7 +139,7 @@ export function ManagerCustomerRequests() {
     setActionError(null);
 
     // Parse requested values
-    const requested = parseJsonSafe(selectedReq.requestedValue);
+    const requested = extractValuesSafe(selectedReq.requestedValue, (selectedReq as any).items);
     const customerId = selectedReq.transactionId;
 
     // Check duplicate phone if phone changed
@@ -184,7 +264,9 @@ export function ManagerCustomerRequests() {
             <tbody>
               {filteredRequests.map((req) => {
                 const isPending =
-                  req.status === 'PENDING_MD' || (req.status as string) === 'PENDING';
+                  req.status === 'PENDING_MANAGER_APPROVAL' ||
+                  req.status === 'PENDING_MD' ||
+                  (req.status as string) === 'PENDING';
                 return (
                   <tr key={req.id}>
                     <td className="font-mono font-bold text-[#2F668F]">{req.id}</td>
@@ -240,6 +322,7 @@ export function ManagerCustomerRequests() {
         isOpen={isDiffModalOpen}
         onClose={() => setIsDiffModalOpen(false)}
         title={`Review Customer Change Request — ${selectedReq?.id}`}
+        maxWidth="max-w-3xl"
       >
         {selectedReq && (
           <div className="space-y-4 text-xs">
@@ -283,20 +366,50 @@ export function ManagerCustomerRequests() {
               <h4 className="text-xs font-bold text-[#16425B] uppercase tracking-wider mb-2">
                 Field-by-Field Comparison (Original vs Requested)
               </h4>
-              <div className="border border-[#D9DBD6] rounded-lg overflow-hidden">
-                <table className="tms-table">
+              <div className="border border-[#D9DBD6] rounded-lg overflow-x-auto bg-white shadow-sm">
+                <table className="w-full border-collapse text-left text-xs min-w-[580px]">
                   <thead>
-                    <tr className="bg-[#f0f4f8]">
-                      <th className="w-1/4">Field</th>
-                      <th className="w-3/8 text-rose-800">Original / Current Master Value</th>
-                      <th className="w-3/8 text-emerald-800">Requested New Value</th>
+                    <tr className="bg-[#f0f4f8] border-b border-[#D9DBD6]">
+                      <th className="py-2.5 px-3 font-bold text-[#16425B] uppercase text-[11px] tracking-wider w-[28%]">
+                        Field
+                      </th>
+                      <th className="py-2.5 px-3 font-bold text-[#5A6E7F] uppercase text-[11px] tracking-wider w-[36%]">
+                        Original / Current Master Value
+                      </th>
+                      <th className="py-2.5 px-3 font-bold text-[#16425B] uppercase text-[11px] tracking-wider w-[36%]">
+                        Requested / New Value
+                      </th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-[#D9DBD6]">
                     {(() => {
-                      const orig = parseJsonSafe(selectedReq.originalValue) || {};
-                      const req = parseJsonSafe(selectedReq.requestedValue) || {};
-                      const fields = [
+                      const currentCustomer =
+                        customers.find(
+                          (c) =>
+                            c.id === selectedReq.transactionId ||
+                            c.id === (selectedReq as any).entityId
+                        ) ||
+                        customers.find(
+                          (c) =>
+                            c.name?.toLowerCase().trim() ===
+                            selectedReq.entityName?.toLowerCase().trim()
+                        );
+
+                      const origFromReq = extractValuesSafe(
+                        selectedReq.originalValue,
+                        (selectedReq as any).items?.map((it: any) => ({
+                          fieldName: it.fieldName || it.field,
+                          requestedValue: it.oldValue,
+                        }))
+                      );
+
+                      const requested = extractValuesSafe(
+                        selectedReq.requestedValue,
+                        (selectedReq as any).items
+                      );
+
+                      // Standard required fields
+                      const fields: Array<{ key: string; label: string }> = [
                         { key: 'name', label: 'Customer Name' },
                         { key: 'phone', label: 'Phone Number' },
                         { key: 'address', label: 'Billing Address' },
@@ -304,22 +417,103 @@ export function ManagerCustomerRequests() {
                         { key: 'gstin', label: 'GSTIN' },
                       ];
 
+                      // Additional supported fields if present on customer or in request
+                      if (
+                        currentCustomer?.alternatePhone ||
+                        origFromReq['alternatePhone'] ||
+                        requested['alternatePhone'] !== undefined
+                      ) {
+                        fields.push({ key: 'alternatePhone', label: 'Alternate Phone' });
+                      }
+
+                      if (
+                        currentCustomer?.notes ||
+                        origFromReq['notes'] ||
+                        requested['notes'] !== undefined
+                      ) {
+                        fields.push({ key: 'notes', label: 'Notes / Remarks' });
+                      }
+
+                      // Any other fields from request not yet listed
+                      for (const reqKey of Object.keys(requested)) {
+                        if (!fields.some((f) => f.key === reqKey)) {
+                          const formattedLabel = reqKey
+                            .replace(/([A-Z])/g, ' $1')
+                            .replace(/^./, (str) => str.toUpperCase());
+                          fields.push({ key: reqKey, label: formattedLabel });
+                        }
+                      }
+
                       return fields.map((f) => {
-                        const oVal = orig[f.key] ?? '—';
-                        const nVal = req[f.key] ?? '—';
-                        const isDiff = String(oVal).trim() !== String(nVal).trim();
+                        // 1. Resolve Original / Current Master Value
+                        const rawMaster = getCustomerFieldValue(currentCustomer, f.key);
+                        const rawOrig = rawMaster || origFromReq[f.key] || '';
+                        const hasOrig = Boolean(rawOrig && rawOrig.trim() !== '');
+
+                        // 2. Resolve Requested / New Value
+                        const hasReq = Object.prototype.hasOwnProperty.call(requested, f.key);
+                        const rawReq = hasReq ? (requested[f.key] ?? '') : '';
+                        const isCleared =
+                          hasReq &&
+                          (!rawReq ||
+                            rawReq.trim() === '' ||
+                            rawReq.toLowerCase() === 'clear' ||
+                            rawReq.toLowerCase() === 'clear value');
+
+                        const isChanged =
+                          hasReq &&
+                          !isCleared &&
+                          rawReq.trim() !== (hasOrig ? rawOrig.trim() : '');
+
+                        const isRowDiff = isChanged || isCleared;
 
                         return (
-                          <tr key={f.key} className={isDiff ? 'bg-amber-50/50' : ''}>
-                            <td className="font-bold text-[#16425B]">{f.label}</td>
-                            <td className="font-mono text-xs text-[#5A6E7F]">{oVal || '—'}</td>
-                            <td className="font-mono text-xs">
-                              {isDiff ? (
-                                <strong className="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">
-                                  {nVal || '—'}
-                                </strong>
+                          <tr
+                            key={f.key}
+                            className={`transition-colors ${
+                              isRowDiff ? 'bg-amber-50/50 hover:bg-amber-50' : 'hover:bg-[#fbfcf9]'
+                            }`}
+                          >
+                            <td className="py-2.5 px-3 font-bold text-[#16425B] align-middle">
+                              {f.label}
+                            </td>
+                            <td className="py-2.5 px-3 align-middle">
+                              {hasOrig ? (
+                                <span className="font-mono text-xs text-[#2F668F]">
+                                  {rawOrig}
+                                </span>
                               ) : (
-                                <span className="text-[#5A6E7F]">{nVal || '—'}</span>
+                                <span className="text-xs text-[#8C9BA5] italic">
+                                  Not provided
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 align-middle">
+                              {isCleared ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300 italic">
+                                  Clear value
+                                </span>
+                              ) : isChanged ? (
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold font-mono bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs">
+                                  {rawReq}
+                                </span>
+                              ) : hasReq ? (
+                                <span className="font-mono text-xs text-[#5A6E7F]">
+                                  {rawReq || '—'}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-[#5A6E7F]">
+                                  {hasOrig ? (
+                                    <span className="font-mono">
+                                      {rawOrig}{' '}
+                                      <span className="text-[11px] text-[#8C9BA5] font-sans font-normal">
+                                        (Unchanged)
+                                      </span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-[#8C9BA5] italic">Not provided</span>
+                                  )}
+                                </span>
                               )}
                             </td>
                           </tr>
@@ -332,7 +526,9 @@ export function ManagerCustomerRequests() {
             </div>
 
             {/* ACTIONS IF PENDING */}
-            {(selectedReq.status === 'PENDING_MD' || (selectedReq.status as string) === 'PENDING') ? (
+            {(selectedReq.status === 'PENDING_MANAGER_APPROVAL' ||
+              selectedReq.status === 'PENDING_MD' ||
+              (selectedReq.status as string) === 'PENDING') ? (
               <div className="pt-3 border-t border-[#D9DBD6] space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-[#5A6E7F]">

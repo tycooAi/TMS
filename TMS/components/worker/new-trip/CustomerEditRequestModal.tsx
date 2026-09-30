@@ -78,9 +78,9 @@ export function CustomerEditRequestModal({
         year: 'numeric',
       });
 
-      const originalSummary = Object.entries(changes)
-        .map(([k, v]) => `${k}: "${v.old}"`)
-        .join(', ');
+      const originalJson = JSON.stringify(
+        Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v.old]))
+      );
       const requestedJson = JSON.stringify(
         Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v.new]))
       );
@@ -94,9 +94,10 @@ export function CustomerEditRequestModal({
           date: today,
           requestedDate: today,
           requestedBy: 'Worker (Arun Kumar)',
-          originalValue: originalSummary,
+          originalValue: originalJson,
           requestedValue: requestedJson,
           reason: reason.trim(),
+          status: 'PENDING_MANAGER_APPROVAL',
         },
         'Worker (Arun Kumar)'
       );

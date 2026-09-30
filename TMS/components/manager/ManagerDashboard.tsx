@@ -23,7 +23,19 @@ export function ManagerDashboard() {
     vehicleExpenses,
     otherExpenses,
     invoices,
+    corrections,
   } = useTmsStore();
+
+  const pendingCustomerRequests = corrections.filter(
+    (c) =>
+      (c.entityType === 'CUSTOMER' ||
+        c.transactionId?.startsWith('CUS-') ||
+        c.requestedBy === 'Worker (Arun Kumar)' ||
+        c.reason?.toLowerCase().includes('customer')) &&
+      (c.status === 'PENDING_MANAGER_APPROVAL' ||
+        c.status === 'PENDING_MD' ||
+        (c.status as string) === 'PENDING')
+  );
 
   // Financial KPI calculations — unified cross-portal with MD Dashboard & MD Finance
   const totalRevenue = customers.reduce((sum, c) => sum + (c.totalCredit || 0), 0);
@@ -57,6 +69,15 @@ export function ManagerDashboard() {
         title="Operations Command Center"
         description="Live operational oversight, fleet readiness, crusher sources, and commercial rate control"
       >
+        <Link href="/manager/customer-requests" className="btn-secondary relative flex items-center gap-1.5">
+          <Shield size={15} />
+          Customer Requests
+          {pendingCustomerRequests.length > 0 && (
+            <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
+              {pendingCustomerRequests.length}
+            </span>
+          )}
+        </Link>
         <Link href="/manager/rates" className="btn-primary">
           <ClipboardList size={15} />
           Configure Commercial Rates

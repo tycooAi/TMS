@@ -77,7 +77,10 @@ public class DashboardService {
                 .count();
 
         double utilization = totalVehicles > 0 ? ((double) activeVehicles / totalVehicles) * 100.0 : 0.0;
-        long pendingApprovals = correctionRepository.findByStatusOrderByRequestedAtDesc("PENDING").size();
+        long pendingApprovals = correctionRepository.findAll().stream()
+                .filter(r -> ("PENDING_MD_APPROVAL".equalsIgnoreCase(r.getStatus()) || "PENDING".equalsIgnoreCase(r.getStatus()) || "PENDING_MD".equalsIgnoreCase(r.getStatus()))
+                        && !"CUSTOMER".equalsIgnoreCase(r.getEntityType()))
+                .count();
 
         // Calculate truck-wise profitability
         Map<String, List<Trip>> tripsByVehicle = trips.stream()

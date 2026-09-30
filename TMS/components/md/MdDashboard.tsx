@@ -30,7 +30,18 @@ export function MdDashboard() {
   const deliveredTrips = trips.filter((t) => t.status === 'DELIVERED' || t.status === 'COMPLETED').length;
   const vehicleUtilization = vehicles.length > 0 ? Math.round((trips.filter(t => t.status === 'RUNNING').length / vehicles.length) * 100) : 0;
 
-  const pendingCorrections = corrections.filter((c) => c.status === 'PENDING_MD');
+  // MD pending approvals: Accounts-related requests only (Worker customer change requests belong to Manager)
+  const isAccountsCorrection = (c: any) =>
+    c.entityType !== 'CUSTOMER' &&
+    !c.transactionId?.startsWith('CUS-') &&
+    c.requestedBy !== 'Worker (Arun Kumar)' &&
+    !c.reason?.toLowerCase().includes('customer');
+
+  const pendingCorrections = corrections.filter(
+    (c) =>
+      (c.status === 'PENDING_MD' || c.status === 'PENDING_MD_APPROVAL' || (c.status as string) === 'PENDING') &&
+      isAccountsCorrection(c)
+  );
 
   return (
     <div>

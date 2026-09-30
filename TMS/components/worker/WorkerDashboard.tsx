@@ -18,7 +18,18 @@ export function WorkerDashboard() {
   const pendingDeliveries = trips.filter((t) => t.status === 'RUNNING' || t.status === 'LOADED').length;
   const completedToday = trips.filter((t) => t.status === 'DELIVERED' || t.status === 'COMPLETED').length;
 
-  const todayTrips = trips.slice(0, 8);
+  // Defensive deduplication safeguard: guarantees trip ID uniqueness within the manifest table
+  // while strictly preserving stable unique React key bindings (<tr key={trip.id}>)
+  const uniqueTrips = React.useMemo(() => {
+    const seen = new Set<string>();
+    return trips.filter((t) => {
+      if (!t.id || seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    });
+  }, [trips]);
+
+  const todayTrips = uniqueTrips.slice(0, 8);
 
   const getActionButton = (trip: Trip) => {
     if (trip.status === 'DRAFT') {

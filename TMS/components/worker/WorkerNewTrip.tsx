@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTmsStore } from '../../lib/store';
+import { useTmsStore, readStore } from '../../lib/store';
 import { PageHeader } from '../layout/PageHeader';
 import { Stepper } from '../ui/Stepper';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -532,6 +532,8 @@ export function WorkerNewTrip() {
 
   // Final Form Submission
   const handleSubmitTrip = async () => {
+    if (isSubmitting) return;
+
     // Validate entire form across all steps
     const allErrors: string[] = [];
     if (!formData.customerId) allErrors.push('Customer is missing.');
@@ -626,8 +628,9 @@ export function WorkerNewTrip() {
       deliveryProof: formData.deliveryProof || undefined,
     };
 
-    // Check if trip already exists
-    const isExisting = trips.some((t) => t.id === newTripRecord.id);
+    // Check if trip already exists in local store or current state
+    const currentStore = readStore();
+    const isExisting = currentStore.trips.some((t) => t.id === newTripRecord.id) || trips.some((t) => t.id === newTripRecord.id);
 
     // 1. Try Backend API Submission
     try {
@@ -667,7 +670,12 @@ export function WorkerNewTrip() {
       if (isExisting) {
         await apiClient.trips.update(newTripRecord.id, payload);
       } else {
-        await apiClient.trips.create(payload);
+        const apiRes = await apiClient.trips.create(payload);
+        const createdData = (apiRes && ((apiRes as any).data || apiRes)) as any;
+        if (createdData && createdData.id) {
+          newTripRecord.id = createdData.id;
+          setFormData((prev) => ({ ...prev, id: createdData.id }));
+        }
       }
     } catch (apiErr: any) {
       console.warn('Backend API trip save skipped or returned note:', apiErr?.message);
@@ -675,7 +683,9 @@ export function WorkerNewTrip() {
 
     // 2. Save into unified local shared state (available across My Trips, Accounts, MD Cockpit)
     try {
-      if (isExisting) {
+      const latestStore = readStore();
+      const alreadyExists = isExisting || latestStore.trips.some((t) => t.id === newTripRecord.id);
+      if (alreadyExists) {
         updateTrip(newTripRecord);
       } else {
         createTrip(newTripRecord);
@@ -758,9 +768,11 @@ export function WorkerNewTrip() {
               onClick={() => {
                 setIsSuccess(false);
                 setCurrentStep(0);
+                const currentTrips = readStore().trips;
+                const nextId = generateNextId('TRP', currentTrips.map((t) => t.id));
                 setFormData((prev) => ({
                   ...prev,
-                  id: generateNextId('TRP', trips.map((t) => t.id)),
+                  id: nextId,
                   customerId: '',
                   customerName: '',
                   customerPhone: '',
@@ -2190,7 +2202,10 @@ export function WorkerNewTrip() {
         title="Confirm Operational Trip Dispatch"
         message={`Are you ready to submit Trip Details ${formData.id} for Customer "${formData.customerName}" with Vehicle "${formData.vehicleRegistration}"? Once submitted, core dispatch records will be locked.`}
         confirmLabel="Submit Dispatch"
-        onCancel={() => setIsConfirmOpen(false)}
+        isLoading={isSubmitting}
+        onCancel={() => {
+          if (!isSubmitting) setIsConfirmOpen(false);
+        }}
         onConfirm={handleSubmitTrip}
       />
 

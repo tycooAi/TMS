@@ -194,7 +194,9 @@ export const apiClient = {
     create: (data: any) => fetchWithAuth<any>('/customers', { method: 'POST', body: JSON.stringify(data) }),
   },
   approvals: {
-    getPending: () => fetchWithAuth<any[]>('/approvals/pending'),
+    getPending: (scope?: string) => fetchWithAuth<any[]>(scope ? `/approvals/pending?scope=${scope}` : '/approvals/pending'),
+    getMdPending: () => fetchWithAuth<any[]>('/approvals/md/pending'),
+    getManagerPending: () => fetchWithAuth<any[]>('/approvals/manager/pending'),
     approve: (id: string, comments: string = 'Approved') =>
       fetchWithAuth<any>(`/approvals/${id}/approve`, { method: 'POST', body: JSON.stringify({ comments }) }),
     reject: (id: string, comments: string) =>
