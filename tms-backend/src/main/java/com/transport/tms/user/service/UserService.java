@@ -40,8 +40,16 @@ public class UserService {
 
     @Transactional
     public AuthDto.UserDto createUser(AuthDto.CreateUserRequest request) {
-        if (userRepository.existsByUsername(request.getUsername().toLowerCase().trim())) {
+        String cleanUsername = request.getUsername().toLowerCase().trim();
+        if (userRepository.existsByUsernameIgnoreCase(cleanUsername)) {
             throw new Exceptions.BadRequestException("Username already exists: " + request.getUsername());
+        }
+
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            String cleanEmail = request.getEmail().toLowerCase().trim();
+            if (userRepository.existsByEmailIgnoreCase(cleanEmail)) {
+                throw new Exceptions.BadRequestException("Email already registered: " + request.getEmail());
+            }
         }
 
         String roleName = request.getRole().toUpperCase().trim();
@@ -116,7 +124,14 @@ public class UserService {
     @Transactional
     public void deleteUser(String id) {
         User user = userRepository.findById(id)
+                .or(() -> userRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(id, id))
                 .orElseThrow(() -> new Exceptions.ResourceNotFoundException("User", "id", id));
+
+        // Safety Rule: Never allow removing the primary ADMIN account
+        if ("admin@transports".equalsIgnoreCase(user.getUsername()) || "admin@transports".equalsIgnoreCase(user.getEmail())) {
+            throw new Exceptions.BadRequestException("The primary system administrator account (admin@transports) cannot be deactivated or removed.");
+        }
+
         user.setStatus("INACTIVE");
         userRepository.save(user);
     }

@@ -10,11 +10,9 @@ import {
 } from '../../types';
 import {
   clearSession,
-  DEMO_USERS,
   getCurrentSession,
   getPortalUrl,
   isRolePermitted,
-  setSession,
 } from '../../lib/auth';
 import { apiClient } from '../../lib/api';
 import { readStore } from '../../lib/store';
@@ -137,10 +135,7 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
   useEffect(() => {
     const s = getCurrentSession();
     if (!s) {
-      const defaultUser =
-        DEMO_USERS.find((u) => u.role.toLowerCase() === portal) || DEMO_USERS[0];
-      setSession(defaultUser);
-      setLocalSession(defaultUser);
+      router.push('/login');
     } else {
       setLocalSession(s);
     }
@@ -148,7 +143,7 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
     const onAuth = () => setLocalSession(getCurrentSession());
     window.addEventListener('tms:auth', onAuth);
     return () => window.removeEventListener('tms:auth', onAuth);
-  }, [portal]);
+  }, [router]);
 
   // Close profile on click outside
   useEffect(() => {
@@ -268,14 +263,6 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
       { label: 'Executive Reports', href: '/md/reports', icon: FileText },
       { label: 'Audit Trails', href: '/md/audit', icon: ClipboardList },
     ],
-  };
-
-  const handleRoleSwitch = (newRole: UserRole) => {
-    const user = DEMO_USERS.find((u) => u.role === newRole);
-    if (user) {
-      setSession(user);
-      router.push(getPortalUrl(newRole));
-    }
   };
 
   const handleLogout = () => {
@@ -426,7 +413,7 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
               <span>Check System Status</span>
             </button>
             <button
-              onClick={() => handleRoleSwitch('ADMIN')}
+              onClick={() => router.push('/login')}
               className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-xs font-bold text-white bg-[#1e4463] hover:bg-[#285982] border border-[#2d608a] transition-all flex items-center justify-center gap-2"
             >
               <Shield size={14} />
@@ -552,25 +539,6 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
               </nav>
             </div>
           )}
-        </div>
-
-        {/* Quick Portal Switcher */}
-        <div className="p-3 mx-3 mb-2 rounded-lg bg-[#113550]/80 border border-[#215473]">
-          <div className="flex items-center justify-between text-[10px] font-bold text-[#81C4D7] uppercase tracking-wider mb-1.5">
-            <span>Control Persona</span>
-            <span className="text-white bg-[#2F668F] px-1.5 py-0.5 rounded text-[9px]">Demo</span>
-          </div>
-          <select
-            value={session?.role || 'WORKER'}
-            onChange={(e) => handleRoleSwitch(e.target.value as UserRole)}
-            className="w-full text-xs font-semibold bg-[#16425B] text-white border border-[#265d7e] rounded p-1.5 focus:outline-none"
-          >
-            <option value="WORKER">Worker Portal</option>
-            <option value="ACCOUNTS">Accounts Portal</option>
-            <option value="MANAGER">Manager Portal</option>
-            <option value="MD">MD Executive Portal</option>
-            <option value="ADMIN">Admin Control Center</option>
-          </select>
         </div>
 
         {/* User Badge */}

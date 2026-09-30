@@ -40,8 +40,20 @@ public class AuthService {
 
     @Transactional
     public AuthDto.LoginResponse login(AuthDto.LoginRequest request) {
-        User user = userRepository.findByUsername(request.getUsername().toLowerCase())
-                .orElseThrow(() -> new Exceptions.UnauthorizedException("Invalid username or password"));
+        String identifier = request.getUsername().toLowerCase().trim();
+        User user = userRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(identifier, identifier)
+                .or(() -> {
+                    if (!identifier.contains("@")) {
+                        return userRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(identifier + "@transports", identifier + "@transports");
+                    }
+                    return java.util.Optional.empty();
+                })
+                .orElseThrow(() -> new Exceptions.UnauthorizedException("Invalid email or password"));
+
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            log.warn("Blocked login attempt for deactivated user: {}", user.getUsername());
+            throw new Exceptions.UnauthorizedException("This account has been deactivated. Please contact your system administrator.");
+        }
 
         // Global System Shutdown Guard: Only ROLE_ADMIN may log in during shutdown
         SystemControl control = systemControlService.getSystemControl();
@@ -57,18 +69,11 @@ public class AuthService {
             }
         }
 
-        // Allow authentication with provided password or demo role password
-        boolean passwordMatches = passwordEncoder.matches(request.getPassword(), user.getPasswordHash())
-                || request.getPassword().equals(request.getUsername() + "123")
-                || request.getPassword().equals("password123");
+        // Strictly verify BCrypt password hash
+        boolean passwordMatches = passwordEncoder.matches(request.getPassword(), user.getPasswordHash());
 
         if (!passwordMatches) {
-            throw new Exceptions.UnauthorizedException("Invalid username or password");
-        }
-
-        // If password was matched via demo fallback, update hash
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            throw new Exceptions.UnauthorizedException("Invalid email or password");
         }
 
         user.setLastLoginAt(LocalDateTime.now());

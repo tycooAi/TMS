@@ -15,51 +15,51 @@ export interface DemoUser {
 
 export const DEMO_USERS: DemoUser[] = [
   {
-    id: 'USR-001',
-    username: 'worker',
-    password: 'password123',
-    name: 'Arun Kumar',
-    email: 'arun@transflow.internal',
+    id: 'USR-PROD-WRK',
+    username: 'worker@transports',
+    password: '',
+    name: 'Operational Worker',
+    email: 'worker@transports',
     role: 'WORKER',
-    employeeId: 'WRK-0024',
-    designation: 'Data Entry Operator',
+    employeeId: 'WRK-0001',
+    designation: 'Operations Specialist',
   },
   {
-    id: 'USR-002',
-    username: 'accounts',
-    password: 'password123',
-    name: 'Anitha S',
-    email: 'anitha@transflow.internal',
+    id: 'USR-PROD-ACC',
+    username: 'accounts@transports',
+    password: '',
+    name: 'Finance & Accounts',
+    email: 'accounts@transports',
     role: 'ACCOUNTS',
-    employeeId: 'ACC-0018',
-    designation: 'Accounts Executive',
+    employeeId: 'ACC-0001',
+    designation: 'Finance Officer',
   },
   {
-    id: 'USR-003',
-    username: 'manager',
-    password: 'password123',
-    name: 'Rajesh V',
-    email: 'rajesh@transflow.internal',
+    id: 'USR-PROD-MGR',
+    username: 'manager@transports',
+    password: '',
+    name: 'Operations Manager',
+    email: 'manager@transports',
     role: 'MANAGER',
-    employeeId: 'MGR-0005',
+    employeeId: 'MGR-0001',
     designation: 'Operations Manager',
   },
   {
-    id: 'USR-004',
-    username: 'md',
-    password: 'password123',
-    name: 'Vikramaditya Rao',
-    email: 'md@transflow.internal',
+    id: 'USR-PROD-MD',
+    username: 'md@transports',
+    password: '',
+    name: 'Managing Director',
+    email: 'md@transports',
     role: 'MD',
     employeeId: 'EXEC-0001',
     designation: 'Managing Director',
   },
   {
-    id: 'USR-005',
-    username: 'admin',
-    password: 'password123',
-    name: 'Karthik Raja',
-    email: 'admin@transflow.internal',
+    id: 'USR-PROD-ADM',
+    username: 'admin@transports',
+    password: '',
+    name: 'System Administrator',
+    email: 'admin@transports',
     role: 'ADMIN',
     employeeId: 'ADM-0001',
     designation: 'System Administrator',
@@ -143,6 +143,19 @@ export function registerApplicationUser(user: DemoUser): void {
   window.dispatchEvent(new Event('tms:users-updated'));
 }
 
+export function removeStoredUser(userIdOrUsername: string): void {
+  if (typeof window === 'undefined') return;
+  const current = getStoredUsers();
+  const updated = current.filter(
+    (u) =>
+      u.id !== userIdOrUsername &&
+      u.username.toLowerCase() !== userIdOrUsername.toLowerCase() &&
+      u.email.toLowerCase() !== userIdOrUsername.toLowerCase()
+  );
+  localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(updated));
+  window.dispatchEvent(new Event('tms:users-updated'));
+}
+
 export function updateStoredUserPassword(usernameOrId: string, newPassword: string): boolean {
   if (typeof window === 'undefined') return false;
   const current = getStoredUsers();
@@ -159,47 +172,35 @@ export function updateStoredUserPassword(usernameOrId: string, newPassword: stri
 }
 
 export function getAllApplicationUsers(): DemoUser[] {
-  return [...DEMO_USERS, ...getStoredUsers()];
+  return [...getStoredUsers()];
 }
 
-export function authenticate(identifier: string, password: string): DemoUser | null {
-  const norm = identifier.trim().toLowerCase();
-  const allUsers = getAllApplicationUsers();
-  const match = allUsers.find(
-    (u) =>
-      (u.username.toLowerCase() === norm ||
-        u.email.toLowerCase() === norm ||
-        u.employeeId.toLowerCase() === norm) &&
-      u.password === password
-  );
-  return match || null;
+export function authenticate(_identifier: string, _password: string): DemoUser | null {
+  // Local bypass removed for production security. All logins must authenticate against backend.
+  return null;
 }
 
 export async function authenticateAsync(identifier: string, password: string): Promise<DemoUser | null> {
   const norm = identifier.trim();
-  try {
-    const { apiClient, setAuthToken } = await import('./api');
-    const res = await apiClient.auth.login(norm, password);
-    if (res && res.token) {
-      setAuthToken(res.token);
-      let roleName = (res.role || 'WORKER').toUpperCase().replace(/^ROLE_/, '');
-      return {
-        id: res.userId || res.employeeId || 'USR-' + res.username,
-        username: res.username,
-        password: '',
-        name: res.fullName || res.username,
-        email: res.email || `${res.username}@transflow.internal`,
-        role: roleName as UserRole,
-        employeeId: res.employeeId || 'EMP-' + res.username,
-        designation: roleName + ' Specialist',
-      };
-    }
-  } catch (err) {
-    console.warn('Backend login attempt fell back to demo/registered users:', err);
+  const { apiClient, setAuthToken } = await import('./api');
+  const res = await apiClient.auth.login(norm, password);
+  if (res && res.token) {
+    setAuthToken(res.token);
+    const roleName = (res.role || 'WORKER').toUpperCase().replace(/^ROLE_/, '');
+    const user: DemoUser = {
+      id: res.userId || res.employeeId || 'USR-' + res.username,
+      username: res.username,
+      password: '',
+      name: res.fullName || res.username,
+      email: res.email || `${res.username}@transflow.internal`,
+      role: roleName as UserRole,
+      employeeId: res.employeeId || 'EMP-' + res.username,
+      designation: roleName + ' Specialist',
+    };
+    setSession(user);
+    return user;
   }
-
-  // Fallback to local demo & stored registered users
-  return authenticate(identifier, password);
+  return null;
 }
 
 export function isRolePermitted(userRole: UserRole | string, targetPortal: 'worker' | 'accounts' | 'manager' | 'md' | 'admin'): boolean {

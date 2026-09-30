@@ -25,6 +25,7 @@ public class UserPrincipal implements UserDetails {
     private String fullName;
     private String email;
     private String roleName;
+    private String status;
     private Collection<? extends GrantedAuthority> authorities;
 
     public static UserPrincipal create(User user) {
@@ -47,6 +48,7 @@ public class UserPrincipal implements UserDetails {
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .roleName(user.getRole().getName())
+                .status(user.getStatus())
                 .authorities(authorities)
                 .build();
     }
@@ -73,7 +75,7 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return "ACTIVE".equalsIgnoreCase(status);
     }
 
     @Override
@@ -83,6 +85,6 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return "ACTIVE".equalsIgnoreCase(status);
     }
 }
