@@ -161,6 +161,11 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
     return () => document.removeEventListener('mousedown', close);
   }, []);
 
+  // Automatically close mobile menu on route change
+  useEffect(() => {
+    setIsMobileNavOpen(false);
+  }, [pathname]);
+
   // Developer & System Control Groups for Admin Portal
   const adminNavGroups: NavGroup[] = [
     {
@@ -446,11 +451,6 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
   const activeNav = allNavItems.find(
     (item) => item.href === pathname || (item.href !== `/${portal}/dashboard` && pathname.startsWith(item.href))
   );
-
-  // Automatically close mobile menu on route change
-  useEffect(() => {
-    setIsMobileNavOpen(false);
-  }, [pathname]);
 
   return (
     <div className="flex min-h-screen bg-[#f4f7fa] font-sans antialiased text-[#16425B] relative overflow-x-hidden">
