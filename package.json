@@ -4,10 +4,11 @@
   "private": true,
   "description": "TransFlow TMS - Unified Transportation Management & Governance System",
   "scripts": {
+    "build": "npm --prefix TMS run build",
     "dev": "npm --prefix TMS run dev",
     "frontend": "npm --prefix TMS run dev",
     "backend": "cd tms-backend && mvnw.cmd spring-boot:run",
-    "start": "npm --prefix TMS run dev",
+    "start": "npm --prefix TMS run start",
     "test:e2e": "python test_e2e.py"
   }
 }
