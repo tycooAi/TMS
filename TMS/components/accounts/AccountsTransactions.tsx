@@ -230,6 +230,13 @@ export function AccountsTransactions() {
                 </td>
               </tr>
             ))}
+            {filteredTransactions.length === 0 && (
+              <tr>
+                <td colSpan={10} className="text-center py-8 text-[#5A6E7F]">
+                  No financial transactions found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

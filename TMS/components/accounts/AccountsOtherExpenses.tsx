@@ -220,6 +220,13 @@ export function AccountsOtherExpenses() {
                   </td>
                 </tr>
               ))}
+              {filteredOtherExpenses.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="text-center py-8 text-[#5A6E7F]">
+                    No other operational expenses recorded.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

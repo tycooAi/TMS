@@ -274,6 +274,13 @@ export function AccountsWorkersWages() {
                 </tr>
               );
             })}
+            {filteredWorkers.length === 0 && (
+              <tr>
+                <td colSpan={10} className="text-center py-8 text-[#5A6E7F]">
+                  No worker wage records found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

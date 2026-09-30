@@ -239,6 +239,13 @@ export function ManagerDashboard() {
                     <td>{r.effectiveFrom}</td>
                   </tr>
                 ))}
+                {rates.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="text-center py-6 text-[#5A6E7F]">
+                      No commercial rates configured yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -282,6 +289,13 @@ export function ManagerDashboard() {
                     </td>
                   </tr>
                 ))}
+                {vehicles.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="text-center py-6 text-[#5A6E7F]">
+                      No vehicles registered yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -326,6 +340,13 @@ export function ManagerDashboard() {
                   </td>
                 </tr>
               ))}
+              {trips.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="text-center py-6 text-[#5A6E7F]">
+                    No operational trips recorded yet.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

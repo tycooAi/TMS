@@ -3,7 +3,7 @@ export function generateId(prefix: string, sequenceNumber: number): string {
 }
 
 export function nextSequenceNumber(existingIds: string[]): number {
-  let maxSeq = 100;
+  let maxSeq = 0;
   for (const id of existingIds) {
     const parts = id.split('-');
     if (parts.length === 2) {

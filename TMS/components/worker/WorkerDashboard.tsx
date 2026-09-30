@@ -67,7 +67,7 @@ export function WorkerDashboard() {
     <div>
       <PageHeader
         title="Operational Dashboard"
-        description="Welcome Back, Arun Kumar (WRK-0024) · Operational Trip Workspace"
+        description="Operational Dispatch & Trip Workspace · Sri Amman Arul Transports"
       >
         <Link href="/worker/trips/new" className="btn-primary">
           <Plus size={16} />

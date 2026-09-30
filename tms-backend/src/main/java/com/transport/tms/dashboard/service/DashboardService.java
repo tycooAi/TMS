@@ -65,7 +65,7 @@ public class DashboardService {
         BigDecimal operatingProfit = grossRevenue.subtract(dieselExpense).subtract(maintenanceExpense);
 
         BigDecimal receivables = invoiceRepository.calculateTotalOutstandingReceivables();
-        if (receivables == null) receivables = BigDecimal.valueOf(1485000.00);
+        if (receivables == null) receivables = BigDecimal.ZERO;
 
         BigDecimal totalCashBank = accounts.stream()
                 .map(CashBankAccount::getBalance)
@@ -135,7 +135,7 @@ public class DashboardService {
     public DashboardDtos.AccountsDashboardDto getAccountsDashboard() {
         long unbilled = tripRepository.countUnbilledTrips();
         BigDecimal receivables = invoiceRepository.calculateTotalOutstandingReceivables();
-        if (receivables == null) receivables = BigDecimal.valueOf(1485000.00);
+        if (receivables == null) receivables = BigDecimal.ZERO;
 
         List<CashBankAccount> accounts = accountRepository.findAll();
         BigDecimal cash = accounts.stream()
@@ -153,12 +153,17 @@ public class DashboardService {
                 .map(Driver::getAdvanceBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        BigDecimal monthlyCollections = paymentRepository.findAll().stream()
+                .filter(p -> !"CANCELLED".equalsIgnoreCase(p.getStatus()))
+                .map(com.transport.tms.finance.payment.entity.Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         return DashboardDtos.AccountsDashboardDto.builder()
                 .unbilledTripsCount(unbilled)
                 .totalOutstandingReceivables(receivables)
                 .cashInHandBalance(cash)
                 .corporateBankBalance(bank)
-                .totalMonthlyCollections(BigDecimal.valueOf(820000.00))
+                .totalMonthlyCollections(monthlyCollections)
                 .totalPendingDriverAdvances(driverAdvances)
                 .build();
     }

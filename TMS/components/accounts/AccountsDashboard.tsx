@@ -10,7 +10,7 @@ import { formatCurrency, formatDate } from '../../lib/calculations';
 import { Plus, ArrowRight, DollarSign, FileText } from '../ui/Icons';
 
 export function AccountsDashboard() {
-  const { customers, transactions, accounts, workers, vehicleExpenses, otherExpenses } = useTmsStore();
+  const { customers, transactions, accounts, workers, vehicleExpenses, otherExpenses, trips, invoices, payments } = useTmsStore();
 
   const totalReceivables = customers.reduce((sum, c) => sum + (c.balance || 0), 0);
   const cashBalance = accounts.find((a) => a.type === 'CASH')?.balance || 0;
@@ -19,16 +19,24 @@ export function AccountsDashboard() {
   const totalLiquidCash = cashBalance + bankBalance + onlineBalance;
 
   // Wage pending
-  const wagePending = workers.reduce((sum, w) => sum + Math.max(0, w.salary - w.paid), 0);
+  const wagePending = workers.reduce((sum, w) => sum + Math.max(0, (w.salary || 0) - (w.paid || 0)), 0);
 
   // Month-to-date expenses
-  const totalVehicleExp = vehicleExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const totalOtherExp = otherExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalVehicleExp = vehicleExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const totalOtherExp = otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
   // Today's collections
   const todayCollections = transactions
-    .filter((t) => t.type === 'CUSTOMER_PAYMENT' && t.date.includes('13 Sep'))
-    .reduce((sum, t) => sum + t.amount, 0);
+    .filter((t) => t.type === 'CUSTOMER_PAYMENT')
+    .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+  // Dynamic dispatch & billing aggregates
+  const pendingItemsCount = trips.filter(
+    (t) => (t.status === 'DELIVERED' || t.status === 'COMPLETED') && !t.invoiceId
+  ).length;
+
+  const weekCollections = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const monthlyBilling = invoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
 
   const recentTransactions = transactions.slice(0, 6);
 
@@ -88,7 +96,7 @@ export function AccountsDashboard() {
           <span className="text-[11px] font-bold text-[#5A6E7F] uppercase tracking-wider block">
             Today's Pending Items
           </span>
-          <strong className="text-xl font-bold text-[#16425B] my-1 block">5 Items</strong>
+          <strong className="text-xl font-bold text-[#16425B] my-1 block">{pendingItemsCount} Items</strong>
           <p className="text-xs text-[#5A6E7F]">Delivered trips ready for invoice & wage vouchers</p>
         </div>
 
@@ -104,7 +112,7 @@ export function AccountsDashboard() {
           <span className="text-[11px] font-bold text-[#5A6E7F] uppercase tracking-wider block">
             Week Collections
           </span>
-          <strong className="text-xl font-bold text-[#16425B] my-1 block">{formatCurrency(186500)}</strong>
+          <strong className="text-xl font-bold text-[#16425B] my-1 block">{formatCurrency(weekCollections)}</strong>
           <p className="text-xs text-[#5A6E7F]">Credited to bank and online accounts</p>
         </div>
 
@@ -112,7 +120,7 @@ export function AccountsDashboard() {
           <span className="text-[11px] font-bold text-[#5A6E7F] uppercase tracking-wider block">
             Monthly Billing
           </span>
-          <strong className="text-xl font-bold text-[#16425B] my-1 block">{formatCurrency(782400)}</strong>
+          <strong className="text-xl font-bold text-[#16425B] my-1 block">{formatCurrency(monthlyBilling)}</strong>
           <p className="text-xs text-[#5A6E7F]">Total freight delivery billing volume</p>
         </div>
       </div>
@@ -168,6 +176,13 @@ export function AccountsDashboard() {
                   </td>
                 </tr>
               ))}
+              {recentTransactions.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="text-center py-8 text-[#5A6E7F]">
+                    No financial transactions recorded yet.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

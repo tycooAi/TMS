@@ -42,7 +42,7 @@ public class RateCardService {
             return matching.get(0).getRate();
         }
         // Default fallback
-        return BigDecimal.valueOf(750.00);
+        return BigDecimal.ZERO;
     }
 
     @Transactional(readOnly = true)

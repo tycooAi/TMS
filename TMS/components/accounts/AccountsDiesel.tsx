@@ -292,6 +292,13 @@ export function AccountsDiesel() {
                 </td>
               </tr>
             ))}
+            {filteredDieselRecords.length === 0 && (
+              <tr>
+                <td colSpan={12} className="text-center py-8 text-[#5A6E7F]">
+                  No diesel fueling records found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

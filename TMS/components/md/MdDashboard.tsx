@@ -197,6 +197,13 @@ export function MdDashboard() {
                     <td className="font-bold text-amber-800">{formatCurrency(c.balance)}</td>
                   </tr>
                 ))}
+                {customers.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="text-center py-6 text-[#5A6E7F]">
+                      No customers registered yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

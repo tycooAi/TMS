@@ -50,7 +50,7 @@ public class TripService {
         BigDecimal billingRate = request.getBillingRate() != null ? request.getBillingRate() : BigDecimal.ZERO;
         BigDecimal transportRate = request.getTransportRate() != null ? request.getTransportRate() : BigDecimal.ZERO;
         BigDecimal purchaseRate = request.getPurchaseRate() != null ? request.getPurchaseRate() : BigDecimal.ZERO;
-        BigDecimal perKmRate = request.getPerKmRate() != null ? request.getPerKmRate() : BigDecimal.valueOf(28.00);
+        BigDecimal perKmRate = request.getPerKmRate() != null ? request.getPerKmRate() : BigDecimal.ZERO;
 
         if (!isNoLoad) {
             if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {

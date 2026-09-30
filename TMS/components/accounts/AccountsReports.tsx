@@ -276,6 +276,13 @@ export function AccountsReports() {
                     <td className="font-bold text-amber-800">{formatCurrency(c.balance)}</td>
                   </tr>
                 ))}
+                {customers.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="text-center py-6 text-[#5A6E7F]">
+                      No customer records available.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -309,6 +316,13 @@ export function AccountsReports() {
                       <td className="font-mono text-xs">{t.reference || '—'}</td>
                     </tr>
                   ))}
+                {transactions.filter((t) => t.type === 'CUSTOMER_PAYMENT').length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="text-center py-6 text-[#5A6E7F]">
+                      No payment transactions recorded.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -344,6 +358,13 @@ export function AccountsReports() {
                     <td className="font-bold text-emerald-700">{d.mileage} KM/L</td>
                   </tr>
                 ))}
+                {dieselRecords.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="text-center py-6 text-[#5A6E7F]">
+                      No diesel consumption records available.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -386,6 +407,13 @@ export function AccountsReports() {
                     <td>{o.paymentMode}</td>
                   </tr>
                 ))}
+                {vehicleExpenses.length === 0 && otherExpenses.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="text-center py-6 text-[#5A6E7F]">
+                      No vehicle or operational expenses recorded.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -413,6 +441,13 @@ export function AccountsReports() {
                     <td className="font-bold text-[#16425B]">{formatCurrency(a.balance)}</td>
                   </tr>
                 ))}
+                {accounts.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="text-center py-6 text-[#5A6E7F]">
+                      No cash or bank accounts enrolled yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

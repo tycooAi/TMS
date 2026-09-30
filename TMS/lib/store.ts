@@ -48,7 +48,7 @@ import {
 } from '../data/initialData';
 import { generateNextId } from './ids';
 
-export const STORE_STORAGE_KEY = 'tms_unified_store_v2';
+export const STORE_STORAGE_KEY = 'tms_production_store_v1';
 
 export const initialSystemControl: SystemControlState = {
   id: 1,
@@ -154,12 +154,12 @@ export function readStore(): StoreState {
     return {
       ...defaultState,
       ...parsed,
-      trips: deduplicateById(parsed.trips || defaultState.trips),
-      customers: deduplicateById(parsed.customers || defaultState.customers),
-      drivers: deduplicateById(parsed.drivers || defaultState.drivers),
-      invoices: deduplicateById(parsed.invoices || defaultState.invoices),
-      payments: deduplicateById(parsed.payments || defaultState.payments),
-      transactions: deduplicateById(parsed.transactions || defaultState.transactions),
+      trips: deduplicateById(Array.isArray(parsed.trips) ? parsed.trips : defaultState.trips),
+      customers: deduplicateById(Array.isArray(parsed.customers) ? parsed.customers : defaultState.customers),
+      drivers: deduplicateById(Array.isArray(parsed.drivers) ? parsed.drivers : defaultState.drivers),
+      invoices: deduplicateById(Array.isArray(parsed.invoices) ? parsed.invoices : defaultState.invoices),
+      payments: deduplicateById(Array.isArray(parsed.payments) ? parsed.payments : defaultState.payments),
+      transactions: deduplicateById(Array.isArray(parsed.transactions) ? parsed.transactions : defaultState.transactions),
     };
   } catch {
     return defaultState;

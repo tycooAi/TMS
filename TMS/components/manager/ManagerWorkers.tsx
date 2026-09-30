@@ -471,7 +471,7 @@ export function ManagerWorkers() {
               {filteredWorkers.length === 0 && (
                 <tr>
                   <td colSpan={9} className="text-center py-6 text-xs text-[#5A6E7F]">
-                    No workers found matching "{query}".
+                    {query ? `No workers found matching "${query}".` : 'No workers registered yet.'}
                   </td>
                 </tr>
               )}
