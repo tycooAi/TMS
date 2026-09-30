@@ -2,7 +2,11 @@
 nixPkgs = ["nodejs_20"]
 
 [phases.install]
-cmds = ["npm install --legacy-peer-deps --no-audit"]
+cmds = [
+  "npm config set audit false",
+  "npm config set fund false",
+  "npm install --legacy-peer-deps --no-audit"
+]
 
 [phases.build]
 cmds = ["npm run build"]
