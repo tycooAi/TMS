@@ -66,9 +66,9 @@ export function MdDashboard() {
 
       {/* PENDING APPROVAL ALERT BANNER */}
       {pendingCorrections.length > 0 && (
-        <div className="mb-6 p-4 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-between">
+        <div className="mb-6 p-4 rounded-lg bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold shrink-0">
               !
             </div>
             <div>
@@ -82,7 +82,7 @@ export function MdDashboard() {
           </div>
           <Link
             href="/md/approvals"
-            className="btn-primary bg-amber-700 hover:bg-amber-800 border-amber-700 py-1.5 px-3 text-xs"
+            className="btn-primary bg-amber-700 hover:bg-amber-800 border-amber-700 py-1.5 px-3 text-xs self-start sm:self-auto shrink-0"
           >
             Review Requests
           </Link>

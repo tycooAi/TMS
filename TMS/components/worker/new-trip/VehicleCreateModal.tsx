@@ -178,19 +178,19 @@ export function VehicleCreateModal({
           </div>
         </div>
 
-        <div className="pt-3 border-t border-[#D9DBD6] flex justify-end gap-2">
+        <div className="pt-3 border-t border-[#D9DBD6] flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="btn-secondary"
+            className="w-full sm:w-auto btn-secondary text-center justify-center"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="btn-primary"
+            className="w-full sm:w-auto btn-primary text-center justify-center"
           >
             <Plus size={14} />
             {isSubmitting ? 'Saving...' : 'Save & Select Vehicle'}

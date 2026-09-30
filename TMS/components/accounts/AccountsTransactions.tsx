@@ -150,7 +150,7 @@ export function AccountsTransactions() {
           />
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full md:w-auto">
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
@@ -298,18 +298,18 @@ export function AccountsTransactions() {
               Upon submission, the status will shift to <strong>Correction Requested</strong> and appear in the MD Approvals Center with full audit tracing.
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-[#D9DBD6]">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t border-[#D9DBD6]">
               <button
                 type="button"
                 onClick={() => setIsCorrectionModalOpen(false)}
-                className="btn-secondary"
+                className="btn-secondary text-center justify-center"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => setIsConfirmOpen(true)}
-                className="btn-primary"
+                className="btn-primary text-center justify-center"
               >
                 Submit for MD Approval
               </button>

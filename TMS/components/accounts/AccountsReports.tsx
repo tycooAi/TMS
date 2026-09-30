@@ -202,7 +202,7 @@ export function AccountsReports() {
 
       {/* FILTER BAR */}
       <div className="bg-white p-4 rounded-lg border border-[#D9DBD6] mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <div>
             <label className="block text-[10px] font-bold text-[#5A6E7F] uppercase mb-1">From Date</label>
             <input
@@ -223,10 +223,10 @@ export function AccountsReports() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
           <button
             onClick={handleExportCSV}
-            className="btn-secondary text-xs py-1.5 flex items-center gap-1.5"
+            className="btn-secondary text-xs py-1.5 flex items-center gap-1.5 w-full sm:w-auto justify-center"
           >
             <Download size={14} />
             Export CSV
@@ -235,8 +235,8 @@ export function AccountsReports() {
       </div>
 
       {/* REPORT TABLE VIEWER */}
-      <div className="bg-white rounded-lg border border-[#D9DBD6] p-5">
-        <div className="flex justify-between items-center mb-4 pb-3 border-b border-[#D9DBD6]">
+      <div className="bg-white rounded-lg border border-[#D9DBD6] p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-[#D9DBD6]">
           <div>
             <h2 className="text-sm font-bold text-[#16425B] uppercase tracking-wide">
               {reportCategories.find((r) => r.id === selectedReport)?.title}
@@ -245,7 +245,7 @@ export function AccountsReports() {
               Reporting Period: {fromDate} to {toDate}
             </p>
           </div>
-          <span className="text-xs font-bold text-[#2F668F] bg-[#e8f1f5] px-2.5 py-1 rounded">
+          <span className="text-xs font-bold text-[#2F668F] bg-[#e8f1f5] px-2.5 py-1 rounded self-start sm:self-auto">
             Verified Audit Source
           </span>
         </div>

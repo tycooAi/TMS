@@ -829,7 +829,7 @@ export function WorkerNewTrip() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg border border-[#D9DBD6] p-6 shadow-sm">
+      <div className="bg-white rounded-lg border border-[#D9DBD6] p-4 sm:p-6 shadow-sm">
         {/* ========================================================= */}
         {/* STEP 1: TRIP DETAILS                                      */}
         {/* ========================================================= */}
@@ -2153,7 +2153,7 @@ export function WorkerNewTrip() {
         {/* ========================================================= */}
         {/* WIZARD ACTIONS FOOTER (BACK / CONTINUE / SUBMIT)          */}
         {/* ========================================================= */}
-        <div className="mt-8 pt-4 border-t border-[#D9DBD6] flex justify-between items-center">
+        <div className="mt-8 pt-4 border-t border-[#D9DBD6] flex flex-wrap justify-between items-center gap-3">
           <button
             type="button"
             onClick={handleBack}
@@ -2163,7 +2163,7 @@ export function WorkerNewTrip() {
             Back
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-[#5A6E7F] hidden sm:inline">
               Step {currentStep + 1} of {STEPS.length}
             </span>
@@ -2174,7 +2174,8 @@ export function WorkerNewTrip() {
                 onClick={handleNext}
                 className="btn-primary flex items-center gap-1.5"
               >
-                Continue to {STEPS[currentStep + 1]}
+                <span>Continue</span>
+                <span className="hidden sm:inline">to {STEPS[currentStep + 1]}</span>
                 <ChevronRight size={14} />
               </button>
             ) : (

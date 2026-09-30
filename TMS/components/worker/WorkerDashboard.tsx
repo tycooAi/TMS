@@ -95,15 +95,15 @@ export function WorkerDashboard() {
       </div>
 
       {/* TODAY'S TRIPS MANIFEST */}
-      <div className="bg-white rounded-lg border border-[#D9DBD6] p-5">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white rounded-lg border border-[#D9DBD6] p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div>
             <h2 className="text-sm font-bold text-[#16425B]">Today's Operational Trips</h2>
             <p className="text-xs text-[#5A6E7F]">Latest dispatch and delivery manifests</p>
           </div>
           <Link
             href="/worker/trips"
-            className="text-xs font-semibold text-[#2F668F] hover:underline flex items-center gap-1"
+            className="text-xs font-semibold text-[#2F668F] hover:underline flex items-center gap-1 self-start sm:self-auto"
           >
             View All Trips ({trips.length})
             <ArrowRight size={14} />

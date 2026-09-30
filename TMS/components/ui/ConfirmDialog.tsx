@@ -37,12 +37,12 @@ export function ConfirmDialog({
           <p className="text-sm text-[#41474e] leading-relaxed">{message}</p>
         </div>
       </div>
-      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[#D9DBD6]">
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 mt-6 pt-4 border-t border-[#D9DBD6]">
         <button
           type="button"
           onClick={onCancel}
           disabled={isLoading}
-          className="px-4 py-2 text-xs font-semibold text-[#16425B] bg-white border border-[#D9DBD6] rounded-md hover:bg-[#f8faf5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-[#16425B] bg-white border border-[#D9DBD6] rounded-md hover:bg-[#f8faf5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-center"
         >
           {cancelLabel}
         </button>
@@ -50,7 +50,7 @@ export function ConfirmDialog({
           type="button"
           onClick={onConfirm}
           disabled={isLoading}
-          className={`px-4 py-2 text-xs font-semibold rounded-md text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-md text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-center ${
             isDestructive
               ? 'bg-red-600 hover:bg-red-700'
               : 'bg-[#2F668F] hover:bg-[#265375]'

@@ -105,9 +105,9 @@ export function WorkerAddVehicle() {
         description="Register and onboard operational vehicles to the active transport fleet"
       />
 
-      <div className="max-w-2xl bg-white rounded-lg border border-[#D9DBD6] p-6 shadow-sm">
+      <div className="max-w-2xl bg-white rounded-lg border border-[#D9DBD6] p-4 sm:p-6 shadow-sm">
         {isSuccess ? (
-          <div className="text-center py-8 space-y-4">
+          <div className="text-center py-6 sm:py-8 space-y-4">
             <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-200">
               <CheckCircle2 size={32} />
             </div>
@@ -117,16 +117,16 @@ export function WorkerAddVehicle() {
                 Vehicle <strong className="font-mono text-[#16425B]">{registration.trim().toUpperCase()}</strong> has been added to the master fleet and is available for trip dispatch.
               </p>
             </div>
-            <div className="flex justify-center gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
               <button
                 type="button"
                 onClick={handleReset}
-                className="btn-secondary"
+                className="btn-secondary justify-center text-center"
               >
                 <Plus size={14} />
                 Add Another Vehicle
               </button>
-              <Link href="/worker/trips/new" className="btn-primary">
+              <Link href="/worker/trips/new" className="btn-primary justify-center text-center">
                 Proceed to New Trip
                 <ArrowRight size={14} />
               </Link>
@@ -224,14 +224,14 @@ export function WorkerAddVehicle() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-[#D9DBD6] flex justify-end gap-3">
-              <Link href="/worker/dashboard" className="btn-secondary">
+            <div className="pt-4 border-t border-[#D9DBD6] flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+              <Link href="/worker/dashboard" className="btn-secondary justify-center text-center">
                 Cancel
               </Link>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="btn-primary"
+                className="btn-primary justify-center text-center"
               >
                 <Plus size={15} />
                 Save & Register Vehicle

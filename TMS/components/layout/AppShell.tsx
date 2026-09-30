@@ -33,6 +33,7 @@ import {
   Lock,
   LogOut,
   MapPin,
+  Menu,
   Network,
   Plus,
   RefreshCw,
@@ -46,6 +47,7 @@ import {
   UserRound,
   Users,
   Wrench,
+  X,
 } from '../ui/Icons';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 
@@ -445,30 +447,53 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
     (item) => item.href === pathname || (item.href !== `/${portal}/dashboard` && pathname.startsWith(item.href))
   );
 
+  // Automatically close mobile menu on route change
+  useEffect(() => {
+    setIsMobileNavOpen(false);
+  }, [pathname]);
+
   return (
-    <div className="flex min-h-screen bg-[#f4f7fa] font-sans antialiased text-[#16425B]">
-      {/* SIDEBAR */}
+    <div className="flex min-h-screen bg-[#f4f7fa] font-sans antialiased text-[#16425B] relative overflow-x-hidden">
+      {/* MOBILE BACKDROP OVERLAY */}
+      {isMobileNavOpen && (
+        <div
+          className="fixed inset-0 bg-[#0d1e2e]/70 z-40 lg:hidden backdrop-blur-xs transition-opacity duration-200"
+          onClick={() => setIsMobileNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* SIDEBAR (Desktop static, Mobile/Tablet slide-in drawer) */}
       <aside
-        className={`w-64 bg-[#16425B] text-white flex flex-col flex-shrink-0 z-30 transition-all duration-200 border-r border-[#225470] print:hidden ${
-          isMobileNavOpen ? 'fixed inset-y-0 left-0' : 'hidden md:flex'
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-[#16425B] text-white flex flex-col flex-shrink-0 transition-transform duration-300 ease-in-out border-r border-[#225470] print:hidden lg:static lg:w-64 lg:translate-x-0 ${
+          isMobileNavOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         {/* Brand Header */}
-        <div className="h-16 bg-[#113550] border-b border-[#215473] flex items-center gap-3 px-4">
-          <div className="w-8 h-8 rounded-lg bg-[#2F668F] border border-[#81C4D7] text-white flex items-center justify-center shadow-sm shrink-0">
-            <Truck size={18} />
+        <div className="h-16 bg-[#113550] border-b border-[#215473] flex items-center justify-between px-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-[#2F668F] border border-[#81C4D7] text-white flex items-center justify-center shadow-sm shrink-0">
+              <Truck size={18} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <strong className="text-xs font-black tracking-wider text-white uppercase block leading-tight truncate">
+                SRI AMMAN ARUL TRANSPORTS
+              </strong>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <strong className="text-xs font-black tracking-wider text-white uppercase block leading-tight truncate">
-              SRI AMMAN ARUL TRANSPORTS
-            </strong>
-          </div>
+          <button
+            onClick={() => setIsMobileNavOpen(false)}
+            className="lg:hidden p-1.5 text-[#81C4D7] hover:text-white rounded-lg hover:bg-[#16425B] transition-colors"
+            aria-label="Close navigation menu"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Navigation Section */}
         <div className="flex-1 py-3 px-3 overflow-y-auto space-y-4">
           {portal === 'admin' ? (
-            // Render 7 Categorized Sections for Admin
+            // Render Categorized Sections for Admin
             adminNavGroups.map((group) => (
               <div key={group.groupTitle} className="space-y-1">
                 <p className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-[#81C4D7]/70">
@@ -575,11 +600,11 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
       </aside>
 
       {/* MAIN VIEWPORT */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 w-full overflow-hidden">
         {/* PERSISTENT ADMIN SYSTEM STATE WARNING BANNER */}
         {isSystemRestricted && isAdminUser && (
           <div
-            className={`px-6 py-2 text-xs font-bold flex items-center justify-between shadow-md print:hidden ${
+            className={`px-4 sm:px-6 py-2 text-xs font-bold flex flex-wrap items-center justify-between gap-2 shadow-md print:hidden ${
               systemControl?.systemState === 'SHUTDOWN'
                 ? 'bg-gradient-to-r from-rose-700 to-rose-900 text-white'
                 : 'bg-gradient-to-r from-amber-600 to-amber-700 text-white'
@@ -602,33 +627,37 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
         )}
 
         {/* TOP STATUS BAR */}
-        <header className="h-16 bg-white border-b border-[#D9DBD6] px-6 flex items-center justify-between z-20 print:hidden">
-          <div className="flex items-center gap-3">
+        <header className="h-16 bg-white border-b border-[#D9DBD6] px-3 sm:px-6 flex items-center justify-between z-20 print:hidden shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
-              onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
-              className="md:hidden p-2 text-[#5A6E7F] hover:bg-[#f4f7fa] rounded"
-              aria-label="Toggle navigation"
+              onClick={() => setIsMobileNavOpen(true)}
+              className="lg:hidden p-2 -ml-1 text-[#16425B] hover:bg-[#f4f7fa] rounded-lg transition-colors flex items-center justify-center shrink-0"
+              aria-label="Open navigation menu"
             >
-              <LayoutDashboard size={20} />
+              <Menu size={22} />
             </button>
-            <nav aria-label="Breadcrumb" className="flex items-center text-xs font-medium text-[#5A6E7F]">
-              <span className="font-semibold text-[#16425B]">{portalName}</span>
-              <span className="mx-2 text-[#D9DBD6]">/</span>
-              <span className="text-[#2F668F] font-bold">{activeNav?.label || 'Workspace'}</span>
+            <nav aria-label="Breadcrumb" className="flex items-center text-xs font-medium text-[#5A6E7F] min-w-0">
+              <span className="font-semibold text-[#16425B] truncate max-w-[100px] sm:max-w-none">{portalName}</span>
+              <span className="mx-1.5 sm:mx-2 text-[#D9DBD6] shrink-0">/</span>
+              <span className="text-[#2F668F] font-bold truncate max-w-[130px] sm:max-w-none">{activeNav?.label || 'Workspace'}</span>
             </nav>
           </div>
 
-          <div className="flex items-center gap-4">
-            {headerActions}
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            {headerActions && (
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                {headerActions}
+              </div>
+            )}
 
             {/* Profile Dropdown */}
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-[#f4f7fa] border border-transparent hover:border-[#D9DBD6] transition-all"
+                className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[#f4f7fa] border border-transparent hover:border-[#D9DBD6] transition-all"
                 aria-expanded={isProfileOpen}
               >
-                <div className="w-7 h-7 rounded-full bg-[#2F668F] text-white flex items-center justify-center font-bold text-xs">
+                <div className="w-7 h-7 rounded-full bg-[#2F668F] text-white flex items-center justify-center font-bold text-xs shrink-0">
                   {session?.name
                     .split(' ')
                     .map((n) => n[0])
@@ -643,10 +672,10 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
               </button>
 
               {isProfileOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg border border-[#D9DBD6] shadow-xl p-4 z-50 animate-in fade-in zoom-in-95 duration-100">
+                <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-white rounded-lg border border-[#D9DBD6] shadow-xl p-4 z-50 animate-in fade-in zoom-in-95 duration-100">
                   <div className="pb-3 mb-3 border-b border-[#D9DBD6]">
-                    <p className="text-xs font-bold text-[#16425B]">{session?.name}</p>
-                    <p className="text-[11px] text-[#5A6E7F]">{session?.email}</p>
+                    <p className="text-xs font-bold text-[#16425B] truncate">{session?.name}</p>
+                    <p className="text-[11px] text-[#5A6E7F] truncate">{session?.email}</p>
                   </div>
                   <dl className="space-y-1.5 text-xs">
                     <div className="flex justify-between">
@@ -677,7 +706,7 @@ export function AppShell({ portal = 'admin', portalName = 'Portal', children, he
         </header>
 
         {/* PAGE CONTENT */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">{children}</main>
+        <main className="flex-1 overflow-y-auto p-3 sm:p-5 md:p-6 lg:p-8 min-w-0">{children}</main>
       </div>
 
       <ConfirmDialog

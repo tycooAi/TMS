@@ -356,10 +356,10 @@ export function AdminDataExplorer() {
 
       {/* CONTROLLED EDIT MODAL */}
       {isEditModalOpen && selectedRecord && activeTab === 'customers' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-none">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/40 backdrop-blur-none">
           <form
             onSubmit={handleSaveEdit}
-            className="max-w-md w-full bg-white rounded-lg border border-slate-300 shadow-xl p-5 space-y-4"
+            className="max-w-md w-full max-w-[calc(100vw-1rem)] bg-white rounded-lg border border-slate-300 shadow-xl p-4 sm:p-5 space-y-4"
           >
             <div className="pb-3 border-b border-slate-100">
               <h3 className="text-sm font-semibold text-slate-900">
@@ -413,17 +413,17 @@ export function AdminDataExplorer() {
               </p>
             </div>
 
-            <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+            <div className="pt-3 flex flex-col-reverse sm:flex-row justify-end gap-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setIsEditModalOpen(false)}
-                className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900"
+                className="w-full sm:w-auto px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 text-center"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-md transition-colors"
+                className="w-full sm:w-auto px-4 py-1.5 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-md transition-colors text-center"
               >
                 Save Changes
               </button>
@@ -434,8 +434,8 @@ export function AdminDataExplorer() {
 
       {/* ARCHIVE CONFIRMATION MODAL */}
       {isArchiveModalOpen && selectedRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-none">
-          <div className="max-w-md w-full bg-white rounded-lg border border-slate-300 shadow-xl p-5 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/40 backdrop-blur-none">
+          <div className="max-w-md w-full max-w-[calc(100vw-1rem)] bg-white rounded-lg border border-slate-300 shadow-xl p-4 sm:p-5 space-y-4">
             <div className="pb-2 border-b border-slate-100">
               <h3 className="text-sm font-semibold text-slate-900">
                 Archive Entity: {selectedRecord.name}
@@ -459,11 +459,11 @@ export function AdminDataExplorer() {
               />
             </div>
 
-            <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
+            <div className="pt-2 flex flex-col-reverse sm:flex-row justify-end gap-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setIsArchiveModalOpen(false)}
-                className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900"
+                className="w-full sm:w-auto px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 text-center"
               >
                 Cancel
               </button>
@@ -471,7 +471,7 @@ export function AdminDataExplorer() {
                 type="button"
                 onClick={handleExecuteArchive}
                 disabled={!archiveReason.trim()}
-                className="px-4 py-1.5 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100 disabled:opacity-50 rounded-md transition-colors"
+                className="w-full sm:w-auto px-4 py-1.5 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100 disabled:opacity-50 rounded-md transition-colors text-center"
               >
                 Confirm Archive
               </button>

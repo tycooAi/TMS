@@ -197,14 +197,14 @@ export function AdminUsers() {
         </button>
       </PageHeader>
 
-      <div className="bg-white rounded-lg border border-[#D9DBD6] p-5 shadow-sm">
-        <div className="flex justify-between items-center mb-4">
+      <div className="bg-white rounded-lg border border-[#D9DBD6] p-4 sm:p-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <span className="text-xs text-[#5A6E7F]">
             Total Active Accounts: <strong>{usersList.length}</strong> (Synchronized across Spring Boot & TransFlow SaaS)
           </span>
           <button
             onClick={loadUsers}
-            className="text-xs text-[#2F668F] font-semibold hover:underline"
+            className="text-xs text-[#2F668F] font-semibold hover:underline self-start sm:self-auto"
           >
             ↻ Refresh Directory
           </button>
@@ -365,18 +365,18 @@ export function AdminUsers() {
             Password will be securely hashed with BCrypt. Plaintext credentials are never saved.
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#D9DBD6]">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t border-[#D9DBD6]">
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="btn-secondary"
+              className="w-full sm:w-auto btn-secondary text-center justify-center"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={() => setIsConfirmOpen(true)}
-              className="btn-primary"
+              className="w-full sm:w-auto btn-primary text-center justify-center"
             >
               Provision Account
             </button>
@@ -430,18 +430,18 @@ export function AdminUsers() {
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-[#D9DBD6]">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-[#D9DBD6]">
               <button
                 type="button"
                 onClick={() => setResetUser(null)}
-                className="btn-secondary"
+                className="w-full sm:w-auto btn-secondary text-center justify-center"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleResetPasswordSubmit}
-                className="btn-primary"
+                className="w-full sm:w-auto btn-primary text-center justify-center"
               >
                 Save New Password
               </button>

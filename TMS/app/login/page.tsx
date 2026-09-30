@@ -71,19 +71,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f7fa] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#f4f7fa] flex flex-col justify-center py-6 sm:py-12 px-3 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         {/* Brand Icon */}
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#16425B] border-2 border-[#81C4D7] text-white shadow-md mb-4">
-          <Truck size={28} />
+        <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#16425B] border-2 border-[#81C4D7] text-white shadow-md mb-3 sm:mb-4">
+          <Truck size={26} />
         </div>
-        <h1 className="text-2xl font-black text-[#16425B] tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-black text-[#16425B] tracking-tight">
           SRI AMMAN ARUL TRANSPORTS
         </h1>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 shadow-sm rounded-xl border border-[#D9DBD6] sm:px-10">
+      <div className="mt-6 sm:mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-6 sm:py-8 px-4 sm:px-10 shadow-sm rounded-xl border border-[#D9DBD6]">
           <div className="mb-6 pb-4 border-b border-[#D9DBD6]">
             <h2 className="text-base font-bold text-[#16425B]">Sign In to Workspace</h2>
             <p className="text-xs text-[#5A6E7F] mt-0.5">
@@ -121,7 +121,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="p-3 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-md">
+              <div className="p-3 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-md break-words">
                 {error}
               </div>
             )}
@@ -146,7 +146,7 @@ export default function LoginPage() {
                 1-Click Demo
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => handleQuickLogin('WORKER')}
@@ -186,7 +186,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => handleQuickLogin('ADMIN')}
-                className="col-span-2 p-2.5 text-center border border-[#D9DBD6] rounded-lg hover:border-[#2F668F] hover:bg-[#f8faf5] transition-all"
+                className="sm:col-span-2 p-2.5 text-center border border-[#D9DBD6] rounded-lg hover:border-[#2F668F] hover:bg-[#f8faf5] transition-all"
               >
                 <div className="text-xs font-bold text-[#16425B]">Admin Control Center</div>
                 <div className="text-[10px] text-[#5A6E7F]">Karthik Raja (ADM-0001)</div>

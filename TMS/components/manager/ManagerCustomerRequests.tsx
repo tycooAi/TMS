@@ -226,7 +226,7 @@ export function ManagerCustomerRequests() {
       )}
 
       {/* FILTER TABS */}
-      <div className="flex gap-2 mb-6 border-b border-[#D9DBD6] pb-3">
+      <div className="flex flex-wrap gap-2 mb-6 border-b border-[#D9DBD6] pb-3">
         {(['PENDING', 'APPROVED', 'REJECTED', 'ALL'] as const).map((st) => (
           <button
             key={st}
@@ -247,7 +247,7 @@ export function ManagerCustomerRequests() {
       </div>
 
       {/* REQUESTS TABLE */}
-      <div className="bg-white rounded-lg border border-[#D9DBD6] p-5 shadow-sm">
+      <div className="bg-white rounded-lg border border-[#D9DBD6] p-4 sm:p-5 shadow-sm">
         <div className="table-container">
           <table className="tms-table">
             <thead>
@@ -530,15 +530,15 @@ export function ManagerCustomerRequests() {
               selectedReq.status === 'PENDING_MD' ||
               (selectedReq.status as string) === 'PENDING') ? (
               <div className="pt-3 border-t border-[#D9DBD6] space-y-3">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                   <span className="text-xs text-[#5A6E7F]">
                     Approving this request will immediately update the shared Customer record across all portals.
                   </span>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={() => setIsConfirmReject(true)}
-                      className="px-3 py-1.5 rounded-lg border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 font-bold text-xs flex items-center gap-1"
+                      className="px-3 py-2 rounded-lg border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 font-bold text-xs flex items-center justify-center gap-1"
                     >
                       <X size={14} />
                       Reject Request
@@ -546,7 +546,7 @@ export function ManagerCustomerRequests() {
                     <button
                       type="button"
                       onClick={() => setIsConfirmApprove(true)}
-                      className="btn-primary bg-emerald-700 hover:bg-emerald-800 border-emerald-700 flex items-center gap-1"
+                      className="btn-primary bg-emerald-700 hover:bg-emerald-800 border-emerald-700 flex items-center justify-center gap-1 py-2 text-center"
                     >
                       <Check size={14} />
                       Approve & Update Customer
@@ -601,18 +601,18 @@ export function ManagerCustomerRequests() {
               className="tms-input"
             />
           </div>
-          <div className="flex justify-end gap-3 pt-3 border-t border-[#D9DBD6]">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-3 border-t border-[#D9DBD6]">
             <button
               type="button"
               onClick={() => setIsConfirmReject(false)}
-              className="btn-secondary"
+              className="btn-secondary text-center justify-center"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleReject}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
+              className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-center justify-center text-xs"
             >
               Confirm Rejection
             </button>

@@ -298,7 +298,7 @@ export function AdminSystemControl() {
       )}
 
       {/* METRICS ROW - MINIMAL */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
         <div className="bg-white p-4 rounded-lg border border-slate-200">
           <p className="text-slate-500 font-medium">Environment</p>
           <p className="text-sm font-semibold text-slate-900 mt-1">Production</p>
@@ -539,8 +539,8 @@ export function AdminSystemControl() {
 
       {/* RESUME SYSTEM CONFIRMATION MODAL */}
       {isResumeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="max-w-md w-full bg-white rounded-xl border border-slate-300 shadow-2xl p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="max-w-md w-full max-w-[calc(100vw-1rem)] bg-white rounded-xl border border-slate-300 shadow-2xl p-4 sm:p-6 space-y-4">
             <div className="pb-3 border-b border-slate-100 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                 <Check size={20} />
@@ -575,12 +575,12 @@ export function AdminSystemControl() {
               </div>
             </div>
 
-            <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+            <div className="pt-3 flex flex-col-reverse sm:flex-row items-center justify-end gap-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setIsResumeModalOpen(false)}
                 disabled={loading}
-                className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 rounded-md"
+                className="w-full sm:w-auto px-3.5 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 rounded-md text-center"
               >
                 Cancel
               </button>
@@ -591,7 +591,7 @@ export function AdminSystemControl() {
                   await handleReturnOnline();
                 }}
                 disabled={loading}
-                className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors shadow flex items-center gap-1.5"
+                className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors shadow flex items-center justify-center gap-1.5 text-center"
               >
                 <Check size={14} />
                 <span>Confirm & Resume System</span>
