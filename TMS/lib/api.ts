@@ -36,18 +36,17 @@ async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Pr
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
-
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
-      signal: options.signal || controller.signal,
     });
-  } finally {
-    clearTimeout(timeoutId);
+  } catch (err: any) {
+    if (err.name === 'AbortError' || err.message?.includes('aborted') || err.message?.includes('fetch')) {
+      throw new Error('Network connection error. Please check your connection and retry.');
+    }
+    throw err;
   }
 
   if (response.status === 401) {
