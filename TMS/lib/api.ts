@@ -3,7 +3,7 @@
  * Connects Next.js Frontend to Spring Boot REST API (http://localhost:8080/api/v1)
  */
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://tms-production-7db1.up.railway.app/api/v1';
 export const TOKEN_KEY = 'tms_jwt_token';
 
 export interface ApiResponse<T> {
