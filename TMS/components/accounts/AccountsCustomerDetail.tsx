@@ -27,6 +27,7 @@ export function AccountsCustomerDetail({ customerId }: AccountsCustomerDetailPro
   // Modal states
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [paymentId, setPaymentId] = useState('');
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentMode, setPaymentMode] = useState<'CASH' | 'BANK' | 'UPI' | 'ONLINE' | 'OTHER'>('UPI');
   const [targetAccount, setTargetAccount] = useState(accounts[0]?.name || 'State Bank of India (Main A/C)');
@@ -89,6 +90,7 @@ export function AccountsCustomerDetail({ customerId }: AccountsCustomerDetailPro
   };
 
   const handleOpenPayment = () => {
+    setPaymentId(generateNextId('PAY', payments.map((p) => p.id)));
     setPaymentAmount(customer.balance > 0 ? customer.balance : 10000);
     setPaymentReference(`REF-${Date.now().toString().slice(-6)}`);
     setError('');
@@ -96,6 +98,16 @@ export function AccountsCustomerDetail({ customerId }: AccountsCustomerDetailPro
   };
 
   const handleSavePayment = () => {
+    const rawId = paymentId.trim();
+    if (!rawId) {
+      setError('Payment ID is required.');
+      return;
+    }
+    if (payments.some((p) => p.id.trim().toLowerCase() === rawId.toLowerCase())) {
+      setError(`Payment with ID "${rawId}" already exists.`);
+      return;
+    }
+
     if (paymentAmount <= 0) {
       setError('Payment amount must be greater than zero.');
       return;
@@ -106,7 +118,7 @@ export function AccountsCustomerDetail({ customerId }: AccountsCustomerDetailPro
       return;
     }
 
-    const payId = generateNextId('PAY', payments.map((p) => p.id));
+    const payId = rawId;
     const now = new Date().toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
@@ -347,6 +359,20 @@ export function AccountsCustomerDetail({ customerId }: AccountsCustomerDetailPro
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-[#16425B] mb-1">
+                Payment ID <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={paymentId}
+                onChange={(e) => setPaymentId(e.target.value)}
+                placeholder="e.g. PAY-00005"
+                required
+                className="tms-input font-mono font-bold text-[#16425B]"
+              />
+            </div>
+
             <div>
               <label className="block text-xs font-bold text-[#16425B] mb-1">
                 Payment Amount (₹) *

@@ -18,6 +18,8 @@ public class TripDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CreateTripRequest {
+        private String id;
+
         @NotNull(message = "Trip date is required")
         private LocalDate date;
 

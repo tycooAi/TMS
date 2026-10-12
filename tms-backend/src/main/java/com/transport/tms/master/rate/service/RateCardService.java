@@ -55,7 +55,10 @@ public class RateCardService {
     public ConfiguredRate createRate(ConfiguredRate rate) {
         if (rate.getId() == null || rate.getId().isBlank()) {
             rate.setId("RAT-" + String.format("%03d", (int)(Math.random() * 900) + 100));
+        } else if (rateRepository.existsById(rate.getId().trim())) {
+            throw new Exceptions.BadRequestException("Rate Card ID '" + rate.getId() + "' already exists!");
         }
+        rate.setId(rate.getId().trim());
         if (rate.getRateType() == null || rate.getRateType().isBlank()) {
             rate.setRateType("CUSTOMER");
         }

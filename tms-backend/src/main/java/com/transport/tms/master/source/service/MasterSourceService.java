@@ -34,7 +34,10 @@ public class MasterSourceService {
     public Source createSource(Source source) {
         if (source.getId() == null || source.getId().isBlank()) {
             source.setId("SRC-" + String.format("%03d", (int)(Math.random() * 900) + 100));
+        } else if (sourceRepository.existsById(source.getId().trim())) {
+            throw new Exceptions.BadRequestException("Source ID '" + source.getId() + "' already exists!");
         }
+        source.setId(source.getId().trim());
         if (source.getMaterial() == null || source.getMaterial().isBlank()) {
             source.setMaterial("Aggregate / M-Sand");
         }
@@ -79,7 +82,10 @@ public class MasterSourceService {
     public Material createMaterial(Material material) {
         if (material.getId() == null || material.getId().isBlank()) {
             material.setId("MAT-" + String.format("%03d", (int)(Math.random() * 900) + 100));
+        } else if (materialRepository.existsById(material.getId().trim())) {
+            throw new Exceptions.BadRequestException("Material ID '" + material.getId() + "' already exists!");
         }
+        material.setId(material.getId().trim());
         if (material.getCategory() == null || material.getCategory().isBlank()) {
             material.setCategory("AGGREGATE");
         }
@@ -118,7 +124,10 @@ public class MasterSourceService {
     public LocationItem createLocation(LocationItem location) {
         if (location.getId() == null || location.getId().isBlank()) {
             location.setId("LOC-" + String.format("%03d", (int)(Math.random() * 900) + 100));
+        } else if (locationRepository.existsById(location.getId().trim())) {
+            throw new Exceptions.BadRequestException("Location ID '" + location.getId() + "' already exists!");
         }
+        location.setId(location.getId().trim());
         if (location.getType() == null || location.getType().isBlank()) {
             location.setType("SITE");
         }
@@ -155,7 +164,10 @@ public class MasterSourceService {
     public FuelStation createFuelStation(FuelStation fuelStation) {
         if (fuelStation.getId() == null || fuelStation.getId().isBlank()) {
             fuelStation.setId("PMP-" + String.format("%03d", (int)(Math.random() * 900) + 100));
+        } else if (fuelStationRepository.existsById(fuelStation.getId().trim())) {
+            throw new Exceptions.BadRequestException("Fuel Station ID '" + fuelStation.getId() + "' already exists!");
         }
+        fuelStation.setId(fuelStation.getId().trim());
         if (fuelStation.getLocation() == null || fuelStation.getLocation().isBlank()) {
             fuelStation.setLocation("Main Highway Pump");
         }

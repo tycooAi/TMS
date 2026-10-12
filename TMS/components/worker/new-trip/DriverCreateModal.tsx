@@ -20,11 +20,18 @@ export function DriverCreateModal({
 }: DriverCreateModalProps) {
   const { drivers, createDriver } = useTmsStore();
 
+  const [driverId, setDriverId] = useState(() => generateNextId('DRV', drivers.map((d) => d.id)));
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setDriverId(generateNextId('DRV', drivers.map((d) => d.id)));
+    }
+  }, [isOpen, drivers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,9 +59,19 @@ export function DriverCreateModal({
       return;
     }
 
+    const rawId = driverId.trim();
+    if (!rawId) {
+      setError('Driver ID is required.');
+      return;
+    }
+    if (drivers.some((d) => d.id.trim().toLowerCase() === rawId.toLowerCase())) {
+      setError(`Driver with ID "${rawId}" already exists.`);
+      return;
+    }
+
     setIsSubmitting(true);
 
-    const nextId = generateNextId('DRV', drivers.map((d) => d.id));
+    const nextId = rawId;
 
     const newDriver: Driver = {
       id: nextId,
@@ -110,6 +127,20 @@ export function DriverCreateModal({
             <span>{error}</span>
           </div>
         )}
+
+        <div>
+          <label className="block text-xs font-bold text-[#16425B] mb-1">
+            Driver ID <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={driverId}
+            onChange={(e) => setDriverId(e.target.value)}
+            placeholder="e.g. DRV-00005"
+            required
+            className="tms-input font-mono font-bold text-[#16425B]"
+          />
+        </div>
 
         <div>
           <label className="block text-xs font-bold text-[#16425B] mb-1">

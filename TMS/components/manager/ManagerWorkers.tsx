@@ -53,7 +53,7 @@ export function ManagerWorkers() {
     status: 'ACTIVE',
   });
 
-  // Dynamic Login Credentials State
+  const [workerCustomId, setWorkerCustomId] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -173,11 +173,21 @@ export function ManagerWorkers() {
       }
     }
 
+    const rawId = workerCustomId.trim();
+    if (!rawId) {
+      setAddError('Worker ID is required.');
+      return;
+    }
+    if (workers.some((w) => w.id.trim().toLowerCase() === rawId.toLowerCase())) {
+      setAddError(`Worker with ID "${rawId}" already exists.`);
+      return;
+    }
+
     setIsSubmitting(true);
     setAddError('');
 
     try {
-      const nextId = generateNextId('WRK', workers.map((w) => w.id));
+      const nextId = rawId;
       let createdUserId: string | undefined;
 
       if (!isDriver) {
@@ -326,6 +336,7 @@ export function ManagerWorkers() {
         <button
           onClick={() => {
             setAddError('');
+            setWorkerCustomId(generateNextId('WRK', workers.map((w) => w.id)));
             setIsAddWorkerOpen(true);
           }}
           className="btn-primary flex items-center gap-1.5"
@@ -629,6 +640,20 @@ export function ManagerWorkers() {
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-[#16425B] mb-1">
+                  Worker ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={workerCustomId}
+                  onChange={(e) => setWorkerCustomId(e.target.value)}
+                  placeholder="e.g. WRK-00005"
+                  required
+                  className="tms-input font-mono font-bold text-[#16425B]"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-[#16425B] mb-1">
                   Employee Full Name <span className="text-red-500">*</span>

@@ -55,7 +55,14 @@ public class DieselExpenseService {
             vehicle.setCurrentKm(request.getEndKm());
         }
 
-        String dieselId = idGenerator.generateDieselId();
+        String dieselId = request.getId() != null && !request.getId().trim().isEmpty()
+                ? request.getId().trim()
+                : idGenerator.generateDieselId();
+
+        if (dieselRepository.existsById(dieselId)) {
+            throw new Exceptions.BadRequestException("Diesel Log ID '" + dieselId + "' already exists");
+        }
+
         DieselLog log = DieselLog.builder()
                 .id(dieselId)
                 .date(request.getDate())
@@ -116,7 +123,14 @@ public class DieselExpenseService {
     public VehicleExpense recordExpense(VehicleExpense request, UserPrincipal currentUser) {
         Vehicle vehicle = vehicleService.getVehicleByRegistration(request.getVehicleRegistration());
 
-        String expId = idGenerator.generateExpenseId();
+        String expId = request.getId() != null && !request.getId().trim().isEmpty()
+                ? request.getId().trim()
+                : idGenerator.generateExpenseId();
+
+        if (expenseRepository.existsById(expId)) {
+            throw new Exceptions.BadRequestException("Vehicle Expense ID '" + expId + "' already exists");
+        }
+
         VehicleExpense expense = VehicleExpense.builder()
                 .id(expId)
                 .date(request.getDate())

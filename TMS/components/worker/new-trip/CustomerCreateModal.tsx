@@ -25,6 +25,7 @@ export function CustomerCreateModal({
 }: CustomerCreateModalProps) {
   const { customers, createCustomer } = useTmsStore();
 
+  const [customerId, setCustomerId] = useState(() => generateNextId('CUS', customers.map((c) => c.id)));
   const [name, setName] = useState(prefillName);
   const [phone, setPhone] = useState(prefillPhone);
   const [alternatePhone, setAlternatePhone] = useState('');
@@ -32,6 +33,12 @@ export function CustomerCreateModal({
   const [gstin, setGstin] = useState('');
   const [creditTerms, setCreditTerms] = useState('30 Days');
   const [notes, setNotes] = useState('');
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setCustomerId(generateNextId('CUS', customers.map((c) => c.id)));
+    }
+  }, [isOpen, customers]);
 
   const [duplicateMatch, setDuplicateMatch] = useState<Customer | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -87,9 +94,19 @@ export function CustomerCreateModal({
       return;
     }
 
+    const rawId = customerId.trim();
+    if (!rawId) {
+      setError('Customer ID is required.');
+      return;
+    }
+    if (customers.some((c) => c.id.trim().toLowerCase() === rawId.toLowerCase())) {
+      setError(`Customer with ID "${rawId}" already exists.`);
+      return;
+    }
+
     setIsSubmitting(true);
 
-    const nextId = generateNextId('CUS', customers.map((c) => c.id));
+    const nextId = rawId;
     const newCustomer: Customer = {
       id: nextId,
       name: name.trim(),
@@ -209,6 +226,24 @@ export function CustomerCreateModal({
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {/* Customer ID */}
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-bold text-[#16425B] mb-1">
+              Customer ID <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={customerId}
+              onChange={(e) => setCustomerId(e.target.value)}
+              placeholder="e.g. CUS-00005"
+              required
+              className="tms-input font-mono font-bold text-[#16425B]"
+            />
+            <span className="text-[10px] text-[#5A6E7F] mt-0.5 block">
+              Auto-generated ID (editable before creating record)
+            </span>
+          </div>
+
           {/* Customer Name */}
           <div className="sm:col-span-2">
             <label className="block text-xs font-bold text-[#16425B] mb-1">

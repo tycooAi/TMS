@@ -65,7 +65,10 @@ public class CustomerService {
 
         if (customer.getId() == null || customer.getId().isBlank()) {
             customer.setId(idGenerator.generateCustomerId());
+        } else if (customerRepository.existsById(customer.getId().trim())) {
+            throw new Exceptions.BadRequestException("Customer ID '" + customer.getId() + "' already exists!");
         }
+        customer.setId(customer.getId().trim());
         customer.setPhone(customer.getPhone().trim());
         return customerRepository.save(customer);
     }

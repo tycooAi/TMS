@@ -51,6 +51,7 @@ export function ManagerMasterPage({
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [modalItem, setModalItem] = useState<any | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const filteredItems = items.filter((item) => {
@@ -87,16 +88,34 @@ export function ManagerMasterPage({
 
     setModalItem(initialObj);
     setIsEditing(false);
+    setModalError(null);
   };
 
   const handleOpenEdit = (item: any) => {
     setModalItem({ ...item });
     setIsEditing(true);
+    setModalError(null);
   };
 
   const handleSaveItem = () => {
     if (!modalItem) return;
-    store.saveMasterItem(entityKey, modalItem, idField, 'Rajesh V', 'MANAGER');
+    setModalError(null);
+    const rawId = String(modalItem[idField] ?? '').trim();
+    if (!rawId) {
+      setModalError(`${idField.toUpperCase()} is required and cannot be empty.`);
+      return;
+    }
+    if (!isEditing) {
+      const exists = items.some(
+        (x) => String(x[idField] ?? '').trim().toLowerCase() === rawId.toLowerCase()
+      );
+      if (exists) {
+        setModalError(`Record with ${idField.toUpperCase()} "${rawId}" already exists.`);
+        return;
+      }
+    }
+    const itemToSave = { ...modalItem, [idField]: rawId };
+    store.saveMasterItem(entityKey, itemToSave, idField, 'Rajesh V', 'MANAGER');
     setModalItem(null);
   };
 
@@ -230,16 +249,32 @@ export function ManagerMasterPage({
           maxWidth="max-w-xl"
         >
           <div className="space-y-4 text-xs">
+            {modalError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2">
+                <span className="font-semibold">{modalError}</span>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-[#16425B] mb-1">
-                  {idField.toUpperCase()}
+                  {idField.toUpperCase()} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  value={modalItem[idField]}
-                  readOnly
-                  className="tms-input bg-[#f8faf5] text-[#5A6E7F] font-bold"
+                  value={modalItem[idField] ?? ''}
+                  readOnly={isEditing}
+                  disabled={isEditing}
+                  onChange={
+                    !isEditing
+                      ? (e) => {
+                          setModalItem({ ...modalItem, [idField]: e.target.value });
+                          setModalError(null);
+                        }
+                      : undefined
+                  }
+                  className={`tms-input font-bold ${
+                    isEditing ? 'bg-[#f8faf5] text-[#5A6E7F] cursor-not-allowed' : 'text-[#16425B] bg-white'
+                  }`}
                 />
               </div>
 

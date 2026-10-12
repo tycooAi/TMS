@@ -23,6 +23,7 @@ export function AccountsVehicleExpenses() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   // Form state
+  const [expenseId, setExpenseId] = useState('');
   const [selectedReg, setSelectedReg] = useState<string>(vehicles[0]?.registration || '');
   const [expenseType, setExpenseType] = useState<VehicleExpense['expenseType']>('Maintenance');
   const [amount, setAmount] = useState<number>(0);
@@ -82,12 +83,22 @@ export function AccountsVehicleExpenses() {
   const selectedVehicle = vehicles.find((v) => v.registration === selectedReg) || vehicles[0];
 
   const handlePostExpense = () => {
+    const rawId = expenseId.trim();
+    if (!rawId) {
+      setError('Expense ID is required.');
+      return;
+    }
+    if (vehicleExpenses.some((e) => e.id.trim().toLowerCase() === rawId.toLowerCase())) {
+      setError(`Expense with ID "${rawId}" already exists.`);
+      return;
+    }
+
     if (amount <= 0) {
       setError('Expense amount must be greater than zero.');
       return;
     }
 
-    const nextId = generateNextId('VEX', vehicleExpenses.map((e) => e.id));
+    const nextId = rawId;
     const now = new Date().toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
@@ -125,7 +136,14 @@ export function AccountsVehicleExpenses() {
         title="Vehicle Expenses & Fleet Maintenance"
         description="Record fleet operational expenses · Vehicle master data is read-only"
       >
-        <button onClick={() => setIsModalOpen(true)} className="btn-primary">
+        <button
+          onClick={() => {
+            setExpenseId(generateNextId('VEX', vehicleExpenses.map((e) => e.id)));
+            setError('');
+            setIsModalOpen(true);
+          }}
+          className="btn-primary"
+        >
           <Plus size={16} />
           Log Vehicle Expense
         </button>
@@ -288,6 +306,20 @@ export function AccountsVehicleExpenses() {
 
         <div className="space-y-4 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-[#16425B] mb-1">
+                Expense ID <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={expenseId}
+                onChange={(e) => setExpenseId(e.target.value)}
+                placeholder="e.g. VEX-00005"
+                required
+                className="tms-input font-mono font-bold text-[#16425B]"
+              />
+            </div>
+
             <div>
               <label className="block text-xs font-bold text-[#16425B] mb-1">Vehicle Registration *</label>
               <select

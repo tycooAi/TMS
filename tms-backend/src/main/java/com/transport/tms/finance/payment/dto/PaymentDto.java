@@ -30,6 +30,8 @@ public class PaymentDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class RecordPaymentRequest {
+        private String id;
+
         @NotNull(message = "Payment date is required")
         private LocalDate date;
 

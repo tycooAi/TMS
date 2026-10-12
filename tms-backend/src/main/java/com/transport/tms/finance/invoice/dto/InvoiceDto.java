@@ -33,6 +33,8 @@ public class InvoiceDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class GenerateInvoiceRequest {
+        private String id;
+
         @NotNull(message = "Invoice date is required")
         private LocalDate date;
 

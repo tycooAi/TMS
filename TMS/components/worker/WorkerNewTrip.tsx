@@ -435,6 +435,11 @@ export function WorkerNewTrip() {
     const errs: string[] = [];
 
     if (stepIdx === 0) {
+      if (!formData.id || !formData.id.trim()) {
+        errs.push('Trip ID is required.');
+      } else if (!draftId && trips.some((t) => t.id.trim().toLowerCase() === formData.id.trim().toLowerCase())) {
+        errs.push(`Trip with ID "${formData.id.trim()}" already exists.`);
+      }
       if (!formData.businessDate) errs.push('Business Date is required.');
       if (formData.isNoLoad && !formData.noLoadReason.trim()) {
         errs.push('Please specify an operational reason for the No Load run.');
@@ -576,6 +581,12 @@ export function WorkerNewTrip() {
       }
     }
 
+    if (!formData.id || !formData.id.trim()) {
+      allErrors.push('Trip ID is required.');
+    } else if (!draftId && trips.some((t) => t.id.trim().toLowerCase() === formData.id.trim().toLowerCase())) {
+      allErrors.push(`Trip with ID "${formData.id.trim()}" already exists.`);
+    }
+
     if (allErrors.length > 0) {
       setStepErrors(allErrors);
       setIsConfirmOpen(false);
@@ -585,8 +596,10 @@ export function WorkerNewTrip() {
     setIsSubmitting(true);
     setSubmitError(null);
 
+    const rawTripId = formData.id.trim();
+
     const newTripRecord: Trip = {
-      id: formData.id || newTripId,
+      id: rawTripId || newTripId,
       date: formData.businessDate,
       customerId: formData.customerId,
       customerName: formData.customerName,
@@ -635,6 +648,7 @@ export function WorkerNewTrip() {
     // 1. Try Backend API Submission
     try {
       const payload = {
+        id: rawTripId || newTripId,
         date: formData.businessDate,
         customerId: formData.customerId,
         vehicleRegistration: formData.vehicleRegistration,
@@ -846,20 +860,21 @@ export function WorkerNewTrip() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Trip ID - Read Only */}
+              {/* Trip ID */}
               <div>
                 <label className="block text-xs font-bold text-[#16425B] mb-1">
-                  Trip ID <span className="text-[#8898aa] font-normal">(System Generated)</span>
+                  Trip ID {draftId ? <span className="text-[#8898aa] font-normal">(System Generated)</span> : <span className="text-red-500">*</span>}
                 </label>
                 <input
                   type="text"
                   value={formData.id}
-                  readOnly
-                  disabled
-                  className="tms-input font-mono font-bold text-[#2F668F] bg-[#f8faf5] cursor-not-allowed"
+                  readOnly={Boolean(draftId)}
+                  disabled={Boolean(draftId)}
+                  onChange={!draftId ? (e) => setFormData({ ...formData, id: e.target.value }) : undefined}
+                  className={`tms-input font-mono font-bold text-[#2F668F] ${draftId ? 'bg-[#f8faf5] cursor-not-allowed' : 'bg-white'}`}
                 />
                 <span className="text-[10px] text-[#5A6E7F] mt-1 block">
-                  Unique immutable identifier generated per strict sequence.
+                  {draftId ? 'Unique immutable identifier generated per strict sequence.' : 'Auto-generated ID (editable before submission).'}
                 </span>
               </div>
 

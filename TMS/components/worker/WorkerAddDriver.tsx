@@ -14,6 +14,7 @@ export function WorkerAddDriver() {
   const router = useRouter();
   const { drivers, createDriver } = useTmsStore();
 
+  const [driverId, setDriverId] = useState(() => generateNextId('DRV', drivers.map((d) => d.id)));
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
@@ -25,6 +26,16 @@ export function WorkerAddDriver() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    const rawId = driverId.trim();
+    if (!rawId) {
+      setError('Driver ID is required.');
+      return;
+    }
+    if (drivers.some((d) => d.id.trim().toLowerCase() === rawId.toLowerCase())) {
+      setError(`Driver with ID "${rawId}" already exists.`);
+      return;
+    }
 
     const normName = name.trim();
     const normPhone = phone.trim().replace(/\D/g, '');
@@ -65,7 +76,7 @@ export function WorkerAddDriver() {
     setIsSubmitting(true);
     setError('');
 
-    const nextId = generateNextId('DRV', drivers.map((d) => d.id));
+    const nextId = driverId.trim() || generateNextId('DRV', drivers.map((d) => d.id));
     const normName = name.trim();
     const normPhone = phone.trim();
     const normLicense = licenseNumber.trim().toUpperCase();
@@ -110,6 +121,7 @@ export function WorkerAddDriver() {
   };
 
   const handleReset = () => {
+    setDriverId(generateNextId('DRV', drivers.map((d) => d.id)));
     setName('');
     setPhone('');
     setLicenseNumber('');
@@ -158,6 +170,23 @@ export function WorkerAddDriver() {
                 {error}
               </div>
             )}
+
+            <div>
+              <label className="block text-xs font-bold text-[#16425B] mb-1">
+                Driver ID <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={driverId}
+                onChange={(e) => setDriverId(e.target.value)}
+                placeholder="e.g. DRV-00005"
+                className="tms-input font-mono font-bold text-[#16425B]"
+                required
+              />
+              <span className="text-[11px] text-[#5A6E7F] mt-1 block">
+                Auto-generated driver identifier (editable before registration).
+              </span>
+            </div>
 
             <div>
               <label className="block text-xs font-bold text-[#16425B] mb-1">

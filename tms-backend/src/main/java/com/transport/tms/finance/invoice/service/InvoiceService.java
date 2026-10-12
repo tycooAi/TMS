@@ -75,7 +75,14 @@ public class InvoiceService {
             customer = customerRepository.save(customer);
         }
 
-        String invoiceId = idGenerator.generateInvoiceId();
+        String invoiceId = request.getId() != null && !request.getId().trim().isEmpty()
+                ? request.getId().trim()
+                : idGenerator.generateInvoiceId();
+
+        if (invoiceRepository.existsById(invoiceId)) {
+            throw new Exceptions.BadRequestException("Invoice ID '" + invoiceId + "' already exists");
+        }
+
         BigDecimal subtotal = BigDecimal.ZERO;
         List<InvoiceItem> items = new ArrayList<>();
 

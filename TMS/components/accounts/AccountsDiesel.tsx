@@ -80,6 +80,7 @@ export function AccountsDiesel() {
     ]);
     downloadCSV('sri_amman_arul_diesel_filtered.csv', headers, rows);
   };
+  const [dieselId, setDieselId] = useState('');
   const [kmTravelled, setKmTravelled] = useState<number>(200);
   const [billNumber, setBillNumber] = useState('');
   const [targetAccount, setTargetAccount] = useState(accounts[0]?.name || 'State Bank of India (Main A/C)');
@@ -91,6 +92,7 @@ export function AccountsDiesel() {
   const mileage = litres > 0 ? Number((distanceKm / litres).toFixed(2)) : 0;
 
   const handleOpenLog = () => {
+    setDieselId(generateNextId('DSL', dieselRecords.map((d) => d.id)));
     setKmTravelled(200);
     setBillNumber(`IOCL-${Date.now().toString().slice(-5)}`);
     setError('');
@@ -98,6 +100,15 @@ export function AccountsDiesel() {
   };
 
   const handleSaveDiesel = () => {
+    const rawDieselId = dieselId.trim();
+    if (!rawDieselId) {
+      setError('Diesel Log ID is required.');
+      return;
+    }
+    if (dieselRecords.some((d) => d.id.toLowerCase() === rawDieselId.toLowerCase())) {
+      setError(`Diesel Log ID "${rawDieselId}" already exists. Please choose a unique ID.`);
+      return;
+    }
     if (!billNumber.trim()) {
       setError('Fuel bill number is required.');
       return;
@@ -113,7 +124,6 @@ export function AccountsDiesel() {
 
     try {
       const driver = drivers.find((d) => d.id === driverId) || drivers[0];
-      const nextId = generateNextId('DSL', dieselRecords.map((d) => d.id));
       const now = new Date().toLocaleDateString('en-IN', {
         day: '2-digit',
         month: 'short',
@@ -121,7 +131,7 @@ export function AccountsDiesel() {
       });
 
       const newRecord: DieselRecord = {
-        id: nextId,
+        id: rawDieselId,
         vehicleRegistration: vehicleReg,
         driverId: driver.id,
         driverName: driver.name,
@@ -319,6 +329,20 @@ export function AccountsDiesel() {
 
         <div className="space-y-4 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold text-[#16425B] mb-1">Diesel Log ID *</label>
+              <input
+                type="text"
+                value={dieselId}
+                onChange={(e) => {
+                  setDieselId(e.target.value);
+                  setError('');
+                }}
+                placeholder="e.g. DSL-00042"
+                className="tms-input font-mono font-bold text-[#16425B]"
+              />
+            </div>
+
             <div>
               <label className="block text-xs font-bold text-[#16425B] mb-1">Vehicle Registration *</label>
               <select

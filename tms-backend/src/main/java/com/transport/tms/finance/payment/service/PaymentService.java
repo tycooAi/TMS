@@ -42,7 +42,13 @@ public class PaymentService {
     public Payment recordPayment(PaymentDto.RecordPaymentRequest request, UserPrincipal currentUser) {
         Customer customer = customerService.getCustomerById(request.getCustomerId());
 
-        String paymentId = idGenerator.generatePaymentId();
+        String paymentId = request.getId() != null && !request.getId().trim().isEmpty()
+                ? request.getId().trim()
+                : idGenerator.generatePaymentId();
+
+        if (paymentRepository.existsById(paymentId)) {
+            throw new Exceptions.BadRequestException("Payment ID '" + paymentId + "' already exists");
+        }
 
         Payment payment = Payment.builder()
                 .id(paymentId)

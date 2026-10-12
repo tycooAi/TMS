@@ -19,6 +19,7 @@ export function AccountsOtherExpenses() {
   const [filterCategory, setFilterCategory] = useState('ALL');
   const [filterAccount, setFilterAccount] = useState('ALL');
 
+  const [expenseId, setExpenseId] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
@@ -29,6 +30,12 @@ export function AccountsOtherExpenses() {
   const [targetAccount, setTargetAccount] = useState<string>(accounts[0]?.name || 'Cash in Hand');
   const [referenceBill, setReferenceBill] = useState('');
   const [error, setError] = useState('');
+
+  const openCreateModal = () => {
+    setExpenseId(generateNextId('OEX', otherExpenses.map((e) => e.id)));
+    setError('');
+    setIsModalOpen(true);
+  };
 
   const filteredOtherExpenses = otherExpenses.filter((e) => {
     const q = query.trim().toLowerCase();
@@ -76,6 +83,15 @@ export function AccountsOtherExpenses() {
   const totalOtherExpenses = otherExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   const handlePostExpense = () => {
+    const rawExpenseId = expenseId.trim();
+    if (!rawExpenseId) {
+      setError('Expense Voucher ID is required.');
+      return;
+    }
+    if (otherExpenses.some((e) => e.id.toLowerCase() === rawExpenseId.toLowerCase())) {
+      setError(`Expense ID "${rawExpenseId}" already exists. Please choose a unique ID.`);
+      return;
+    }
     if (!description.trim()) {
       setError('Description is required.');
       return;
@@ -85,7 +101,6 @@ export function AccountsOtherExpenses() {
       return;
     }
 
-    const nextId = generateNextId('OEX', otherExpenses.map((e) => e.id));
     const now = new Date().toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
@@ -93,7 +108,7 @@ export function AccountsOtherExpenses() {
     });
 
     const newExpense: OtherExpense = {
-      id: nextId,
+      id: rawExpenseId,
       category,
       description: description.trim(),
       date: now,
@@ -120,7 +135,7 @@ export function AccountsOtherExpenses() {
         title="Administrative & Other Expenses"
         description="Nut & bolt, office stationery, electricity, travel, and miscellaneous operational vouchers"
       >
-        <button onClick={() => setIsModalOpen(true)} className="btn-primary">
+        <button onClick={openCreateModal} className="btn-primary">
           <Plus size={16} />
           Log Other Expense
         </button>
@@ -247,6 +262,20 @@ export function AccountsOtherExpenses() {
 
         <div className="space-y-4 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold text-[#16425B] mb-1">Voucher / Expense ID *</label>
+              <input
+                type="text"
+                value={expenseId}
+                onChange={(e) => {
+                  setExpenseId(e.target.value);
+                  setError('');
+                }}
+                placeholder="e.g. OEX-00042"
+                className="tms-input font-mono font-bold text-[#16425B]"
+              />
+            </div>
+
             <div>
               <label className="block text-xs font-bold text-[#16425B] mb-1">Expense Category *</label>
               <select

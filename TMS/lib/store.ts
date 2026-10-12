@@ -373,6 +373,10 @@ export function useTmsStore() {
       actorName = 'Anitha S'
     ) => {
       const current = readStore();
+      // Check ID duplicate
+      if (customer.id && current.customers.some((c) => c.id.toLowerCase() === customer.id.toLowerCase())) {
+        throw new Error(`Customer with ID ${customer.id} already exists.`);
+      }
       // Check phone duplicate
       const normPhone = customer.phone.replace(/\D/g, '');
       const duplicate = current.customers.find(
@@ -476,6 +480,9 @@ export function useTmsStore() {
   const createInvoice = useCallback(
     (invoice: Invoice, actorName = 'Anitha S') => {
       const current = readStore();
+      if (invoice.id && current.invoices.some((inv) => inv.id.toLowerCase() === invoice.id.toLowerCase())) {
+        throw new Error(`Invoice with ID ${invoice.id} already exists.`);
+      }
       const nextInvoices = [invoice, ...current.invoices];
 
       // Mark trips as invoiced
@@ -543,6 +550,9 @@ export function useTmsStore() {
       actorName = 'Anitha S'
     ) => {
       const current = readStore();
+      if (payment.id && current.payments.some((p) => p.id.toLowerCase() === payment.id.toLowerCase())) {
+        throw new Error(`Payment with ID ${payment.id} already exists.`);
+      }
       const nextPayments = [payment, ...current.payments];
 
       // Update customer balance and totalPaid
@@ -743,6 +753,9 @@ export function useTmsStore() {
   const recordDiesel = useCallback(
     (record: DieselRecord, actorName = 'Anitha S') => {
       const current = readStore();
+      if (record.id && current.dieselRecords.some((d) => d.id.toLowerCase() === record.id.toLowerCase())) {
+        throw new Error(`Diesel record with ID ${record.id} already exists.`);
+      }
       // Duplicate bill check
       const duplicate = current.dieselRecords.find(
         (d) => d.billNumber.trim().toLowerCase() === record.billNumber.trim().toLowerCase()
@@ -814,6 +827,9 @@ export function useTmsStore() {
   const recordVehicleExpense = useCallback(
     (expense: VehicleExpense, actorName = 'Anitha S') => {
       const current = readStore();
+      if (expense.id && current.vehicleExpenses.some((e) => e.id.toLowerCase() === expense.id.toLowerCase())) {
+        throw new Error(`Vehicle expense with ID ${expense.id} already exists.`);
+      }
       const nextAccounts = current.accounts.map((a) =>
         a.name === expense.account
           ? { ...a, balance: a.balance - expense.amount }
@@ -862,6 +878,9 @@ export function useTmsStore() {
   const recordOtherExpense = useCallback(
     (expense: OtherExpense, actorName = 'Anitha S') => {
       const current = readStore();
+      if (expense.id && current.otherExpenses.some((e) => e.id.toLowerCase() === expense.id.toLowerCase())) {
+        throw new Error(`Other expense with ID ${expense.id} already exists.`);
+      }
       const nextAccounts = current.accounts.map((a) =>
         a.name === expense.account
           ? { ...a, balance: a.balance - expense.amount }

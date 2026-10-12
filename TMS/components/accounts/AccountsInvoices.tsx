@@ -42,6 +42,7 @@ export function AccountsInvoices() {
       year: 'numeric',
     })
   );
+  const [invoiceId, setInvoiceId] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
 
@@ -80,6 +81,7 @@ export function AccountsInvoices() {
         !t.invoiceId
     );
 
+    setInvoiceId(generateNextId('INV', invoices.map((i) => i.id)));
     setSelectedTripIds(availableTrips.map((t) => t.id));
     setIsManualItem(availableTrips.length === 0);
     setGstPercent(12);
@@ -122,10 +124,20 @@ export function AccountsInvoices() {
       return;
     }
 
+    const rawId = invoiceId.trim();
+    if (!rawId) {
+      setError('Invoice ID is required.');
+      return;
+    }
+    if (invoices.some((i) => i.id.trim().toLowerCase() === rawId.toLowerCase())) {
+      setError(`Invoice with ID "${rawId}" already exists.`);
+      return;
+    }
+
     setIsSubmitting(true);
     setError('');
 
-    const nextInvId = generateNextId('INV', invoices.map((i) => i.id));
+    const nextInvId = rawId;
     const invNumber = `INV-2026-${String(invoices.length + 1).padStart(4, '0')}`;
 
     const lineItems: InvoiceLineItem[] = selectedTrips.map((t) => ({
@@ -188,6 +200,7 @@ export function AccountsInvoices() {
       }] : [];
 
       await apiClient.finance.generateInvoice({
+        id: rawId,
         date: isoDate,
         dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
         customerId: customer.id,
@@ -399,7 +412,21 @@ export function AccountsInvoices() {
         )}
 
         <div className="space-y-4 text-xs">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-[#16425B] mb-1">
+                Invoice ID <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={invoiceId}
+                onChange={(e) => setInvoiceId(e.target.value)}
+                placeholder="e.g. INV-00005"
+                required
+                className="tms-input font-mono font-bold text-[#16425B]"
+              />
+            </div>
+
             <div>
               <label className="block text-xs font-bold text-[#16425B] mb-1">Customer Account</label>
               <select

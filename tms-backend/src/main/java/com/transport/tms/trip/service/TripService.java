@@ -70,7 +70,13 @@ public class TripService {
             totalAmount = request.getQuantity().multiply(appliedRate);
         }
 
-        String tripId = idGenerator.generateTripId();
+        String tripId = request.getId() != null && !request.getId().trim().isEmpty()
+                ? request.getId().trim()
+                : idGenerator.generateTripId();
+
+        if (tripRepository.existsById(tripId)) {
+            throw new Exceptions.BadRequestException("Trip ID '" + tripId + "' already exists");
+        }
 
         Trip trip = Trip.builder()
                 .id(tripId)

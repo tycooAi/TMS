@@ -36,7 +36,10 @@ public class DriverService {
     public Driver createDriver(Driver driver) {
         if (driver.getId() == null || driver.getId().isBlank()) {
             driver.setId("DRV-" + String.format("%04d", (int)(Math.random() * 9000) + 1000));
+        } else if (driverRepository.existsById(driver.getId().trim())) {
+            throw new Exceptions.BadRequestException("Driver ID '" + driver.getId() + "' already exists!");
         }
+        driver.setId(driver.getId().trim());
         return driverRepository.save(driver);
     }
 

@@ -27,6 +27,7 @@ export function AccountsCustomers() {
   const [error, setError] = useState('');
 
   // Form state
+  const [customerId, setCustomerId] = useState(() => generateNextId('CUS', customers.map((c) => c.id)));
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [alternatePhone, setAlternatePhone] = useState('');
@@ -87,6 +88,15 @@ export function AccountsCustomers() {
 
   const handleValidateStep1 = () => {
     setError('');
+    const rawId = customerId.trim();
+    if (!rawId) {
+      setError('Customer ID is required.');
+      return;
+    }
+    if (customers.some((c) => c.id.trim().toLowerCase() === rawId.toLowerCase())) {
+      setError(`Customer with ID "${rawId}" already exists.`);
+      return;
+    }
     if (!name.trim()) {
       setError('Customer name is required.');
       return;
@@ -107,7 +117,7 @@ export function AccountsCustomers() {
 
   const handleCreateCustomer = () => {
     try {
-      const nextId = generateNextId('CUS', customers.map((c) => c.id));
+      const nextId = customerId.trim() || generateNextId('CUS', customers.map((c) => c.id));
       const newCustomer: Customer = {
         id: nextId,
         name: name.trim(),
@@ -140,6 +150,7 @@ export function AccountsCustomers() {
       setIsModalOpen(false);
       // Reset form
       setStep(1);
+      setCustomerId(generateNextId('CUS', customers.map((c) => c.id)));
       setName('');
       setPhone('');
       setAlternatePhone('');
@@ -160,7 +171,14 @@ export function AccountsCustomers() {
         title="Customer Master Accounts"
         description="Shared central customer master · Derived ledger balances and financial terms"
       >
-        <button onClick={() => setIsModalOpen(true)} className="btn-primary">
+        <button
+          onClick={() => {
+            setCustomerId(generateNextId('CUS', customers.map((c) => c.id)));
+            setError('');
+            setIsModalOpen(true);
+          }}
+          className="btn-primary"
+        >
           <Plus size={16} />
           New Customer Entry
         </button>
@@ -295,6 +313,23 @@ export function AccountsCustomers() {
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-[#16425B] mb-1">
+                  Customer ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                  placeholder="e.g. CUS-00005"
+                  required
+                  className="tms-input font-mono font-bold text-[#16425B]"
+                />
+                <span className="text-[10px] text-[#5A6E7F] mt-0.5 block">
+                  Auto-generated customer identifier (editable before creation).
+                </span>
+              </div>
+
               <div className="sm:col-span-2">
                 <label className="block text-xs font-bold text-[#16425B] mb-1">
                   Customer / Business Name *

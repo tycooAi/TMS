@@ -28,6 +28,7 @@ export function ManagerMaterials() {
   // Modal: Edit/Create Material
   const [materialModal, setMaterialModal] = useState<Material | null>(null);
   const [isEditingMaterial, setIsEditingMaterial] = useState(false);
+  const [materialError, setMaterialError] = useState<string | null>(null);
 
   // Modal: Configure Crusher + Material Rate
   const [isRateModalOpen, setIsRateModalOpen] = useState(false);
@@ -69,16 +70,42 @@ export function ManagerMaterials() {
       status: 'ACTIVE',
     });
     setIsEditingMaterial(false);
+    setMaterialError(null);
   };
 
   const handleOpenEditMaterial = (m: Material) => {
     setMaterialModal({ ...m });
     setIsEditingMaterial(true);
+    setMaterialError(null);
   };
 
   const handleSaveMaterial = () => {
-    if (!materialModal || !materialModal.name.trim()) return;
-    saveMasterItem('materials', materialModal, 'id', 'Rajesh V', 'MANAGER');
+    if (!materialModal) return;
+    setMaterialError(null);
+    const rawId = materialModal.id.trim();
+    if (!rawId) {
+      setMaterialError('Material ID is required.');
+      return;
+    }
+    if (!materialModal.name.trim()) {
+      setMaterialError('Material Name is required.');
+      return;
+    }
+    if (!isEditingMaterial) {
+      const exists = materials.some(
+        (m) => m.id.trim().toLowerCase() === rawId.toLowerCase()
+      );
+      if (exists) {
+        setMaterialError(`Material with ID "${rawId}" already exists.`);
+        return;
+      }
+    }
+    const itemToSave: Material = {
+      ...materialModal,
+      id: rawId,
+      name: materialModal.name.trim(),
+    };
+    saveMasterItem('materials', itemToSave, 'id', 'Rajesh V', 'MANAGER');
     setMaterialModal(null);
   };
 
@@ -523,13 +550,32 @@ export function ManagerMaterials() {
           maxWidth="max-w-md"
         >
           <div className="space-y-4 text-xs">
+            {materialError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2">
+                <AlertCircle size={15} />
+                <span>{materialError}</span>
+              </div>
+            )}
             <div>
-              <label className="block text-xs font-bold text-[#16425B] mb-1">Material ID</label>
+              <label className="block text-xs font-bold text-[#16425B] mb-1">
+                Material ID <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 value={materialModal.id}
-                readOnly
-                className="tms-input bg-gray-50 text-[#5A6E7F] font-mono font-bold"
+                readOnly={isEditingMaterial}
+                disabled={isEditingMaterial}
+                onChange={
+                  !isEditingMaterial
+                    ? (e) => {
+                        setMaterialModal({ ...materialModal, id: e.target.value });
+                        setMaterialError(null);
+                      }
+                    : undefined
+                }
+                className={`tms-input font-mono font-bold ${
+                  isEditingMaterial ? 'bg-gray-50 text-[#5A6E7F] cursor-not-allowed' : 'text-[#16425B] bg-white'
+                }`}
               />
             </div>
 
