@@ -1,0 +1,11 @@
+export type PaymentMode = 'Cash' | 'Bank' | 'UPI' | 'Other';
+export type TransactionStatus = 'Posted' | 'Correction Requested' | 'Draft';
+export type Customer = { id: string; name: string; phone: string; address: string; balance: number; totalCredit: number; totalPaid: number; status: 'Active' | 'Inactive' };
+export type CustomerTransaction = { id: string; customerId: string; date: string; type: 'Customer Payment' | 'Customer Credit'; amount: number; paymentMode?: PaymentMode; balanceAfter: number; status: TransactionStatus; notes?: string };
+export type WorkerWage = { workerId: string; name: string; phone: string; role: string; salary: number; paid: number; advance: number; deduction: number };
+export type Vehicle = { registration: string; type: string; capacity: string; fuelCapacity: string; ownership: 'Own' | 'Rented'; km: string; lastMaintenance: string; maintenanceFee: number };
+export type FinancialTransaction = { id: string; date: string; entity: string; entityType: 'Customer' | 'Worker' | 'Vehicle' | 'Business' | 'Cash / Bank'; type: string; amount: number; paymentMode?: PaymentMode; status: TransactionStatus; createdBy: string; reference?: string; notes?: string; account?: string };
+export type VehicleExpense = FinancialTransaction & { vehicle: string; expenseType: string; time: string };
+export type OtherExpense = FinancialTransaction & { expense: string; time: string };
+export type CashBankAccount = { id: string; name: 'Cash' | 'Bank' | 'UPI / Online'; balance: number };
+export type CorrectionRequest = { id: string; transactionId: string; requestedBy: string; date: string; reason: string; requestedValue: string; status: 'Pending MD Approval' };

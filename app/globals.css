@@ -1,0 +1,212 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+:root {
+  --primary-blue: #2F668F;
+  --secondary-blue: #3B7CA6;
+  --light-neutral: #D9DBD6;
+  --deep-navy: #16425B;
+  --light-cyan: #81C4D7;
+  --canvas: #F5F7FA;
+  --surface: #ffffff;
+  --muted-text: #5A6E7F;
+  --border-soft: #E5ECF1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background-color: var(--canvas);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--canvas);
+  color: #16425B;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a,
+select,
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: #CDE8F0;
+  color: #16425B;
+}
+
+/* Shared enterprise surface treatment used by portal cards and data views. */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--light-neutral);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(22, 66, 91, 0.04), 0 8px 24px rgba(22, 66, 91, 0.04);
+}
+
+/* Custom Table Styles */
+.tms-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+}
+
+.tms-table th {
+  padding: 11px 16px;
+  background: #F7FAFC;
+  color: #5A6E7F;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #D9DBD6;
+  white-space: nowrap;
+}
+
+.tms-table td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  color: #16425B;
+  white-space: nowrap;
+}
+
+.tms-table tbody tr:hover {
+  background-color: #F4F9FB;
+}
+
+.tms-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Button & Form Controls */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #2F668F;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #2F668F;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgba(22, 66, 91, 0.18);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.btn-primary:hover {
+  background-color: #265375;
+  box-shadow: 0 4px 10px rgba(22, 66, 91, 0.18);
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #ffffff;
+  color: #16425B;
+  padding: 8px 16px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #D9DBD6;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.btn-secondary:hover {
+  background-color: #f8faf5;
+  border-color: #3B7CA6;
+}
+
+.tms-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #D9DBD6;
+  border-radius: 7px;
+  background-color: #ffffff;
+  color: #16425B;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tms-input:focus {
+  border-color: #2F668F;
+  box-shadow: 0 0 0 3px rgba(129, 196, 215, 0.3);
+}
+
+.tms-input[readonly] {
+  background-color: #f8faf5;
+  color: #5A6E7F;
+  cursor: default;
+}
+
+/* Badge System */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.badge.active, .badge.posted, .badge.paid, .badge.approved {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.badge.draft, .badge.pending, .badge.pending_md {
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.badge.rejected, .badge.cancelled, .badge.inactive {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.badge.running, .badge.loaded {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
